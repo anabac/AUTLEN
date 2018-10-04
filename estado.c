@@ -4,34 +4,63 @@
 #include "estado.h"
 
 struct _Estado {
-  TipoEstado tipo;
-  char *nombre;
+	char *nombre;
+	TipoEstado tipo;
 };
 
-Estado *EstadoCrea(TipoEstado tipo, char* nombre){
-  Estado *e;
+Estado *EstadoNuevo(char* nombre, TipoEstado tipo){
+	Estado *e;
 
-  e = (Estado *) malloc(sizeof(Estado));
-  if (!e) return NULL;
+	e = (Estado *) malloc(sizeof(Estado));
+	if (!e) return NULL;
 
-  e->nombre = (char *) malloc(sizeof(char) * strlen(nombre));
-  if (!e->nombre){
-    free(e);
-    return NULL;
-  }
-  if (strcpy(e->nombre, nombre) < 0){
-    free(e->nombre);
-    free(e);
-    return NULL;
-  }
-  e->tipo = tipo;
+	e->nombre = (char *) malloc(sizeof(char) * strlen(nombre));
+	if (!e->nombre){
+		free(e);
+		return NULL;
+	}
+	if (strcpy(e->nombre, nombre) < 0){
+	free(e->nombre);
+	free(e);
+	return NULL;
+	}
+	e->tipo = tipo;
 
-  return e;
+	return e;
 }
+
 void EstadoElimina(Estado *e){
-  if(!e) return;
+	if(!e) return;
 
-  free(e->nombre);
-  free(e);
+	free(e->nombre);
+	free(e);
+}
 
+void EstadoImprime(FILE *fd, Estado *e){
+	char inicial[] = "->";
+	char final[] = "*";
+
+	if (!fd | !e) return;
+
+	switch(e->tipo){
+		case INICIAL:
+			final[0] = '\0';
+			break;
+		case FINAL:
+			inicial[0] = '\0';
+			break;
+		case INICIAL_Y_FINAL:
+			break;
+		default:
+			final[0] = '\0';
+			inicial[0] = '\0';
+			break;
+	}
+
+	fprintf(fd, "%s%s%s", inicial, e->nombre, final);
+}
+
+TipoEstado getTipoEstado(Estado *e){
+	if (!e) return NORMAL;
+	return e->tipo;
 }

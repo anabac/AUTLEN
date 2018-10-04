@@ -1,14 +1,12 @@
 #ifndef PALABRA_H
 #define PALABRA_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 typedef struct _Palabra Palabra;
 
-Palabra *insertaLetra(Palabra *w, Simbolo *s);
-int imprimeCadena(Palabra *w);
+Palabra *PalabraNuevo();
+void PalabraElimina(Palabra *p);
+Palabra *PalabraInsertaLetra(Palabra *p, char *l);
+int imprimeCadena(Palabra *p);
 
 
 #endif
