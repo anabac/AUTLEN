@@ -1,0 +1,13 @@
+# Ignorar todo
+*
+
+# Designorar ficheros con extensiones
+!*.*
+
+# Designorar directorios
+!*/
+
+### La combinacion de arriba ignora todos los ficheros sin extension ###
+
+# Ignorar ficheros objeto
+*.o
