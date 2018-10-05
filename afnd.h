@@ -1,8 +1,8 @@
-
 #ifndef AFND_H
 #define AFND_H 
 
 typedef struct _AFND AFND;
+// typedef struct _Transicion Transicion;
 
 AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos);
 void AFNDElimina(AFND * p_afnd);
