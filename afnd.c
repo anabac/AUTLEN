@@ -8,11 +8,6 @@
 #include "palabra.h"
 
 
-// Vale, lo de las transiciones lo he hecho con una matriz porque
-// es lo que le entendi al tipo que tenia que hacer, pero el problema es
-// que claro, se me sobrescriben los valores y no me apetece pensar... asi que 
-// funcionar no funciona :)
-
 struct _AFND {
 	char *nombre;
 
@@ -28,13 +23,13 @@ struct _AFND {
 	int simbolo_actual;
 	Palabra *cadena_entrada;
 
-	char ***transiciones;
+	short ***transiciones;
 };
 
 
 AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 	AFND *afnd;
-	int i;
+	int i, j, k;
 
 	afnd = (AFND *) malloc(sizeof(AFND));
 	if (!afnd) return NULL;
@@ -85,7 +80,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		return NULL;
 	}
 
-	afnd->transiciones = (char ***) malloc(sizeof(char **)*num_estados);
+	afnd->transiciones = (short ***) malloc(sizeof(short **)*num_estados);
 	if (!afnd->transiciones){
 		free(afnd->cadena_entrada);
 		free(afnd->estados_actuales);
@@ -96,9 +91,9 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		return NULL;
 	}
 	for (i = 0; i < num_estados; i++){
-		afnd->transiciones[i] = (char **) malloc(sizeof(char *)*num_estados);
+		afnd->transiciones[i] = (short **) malloc(sizeof(short *)*num_simbolos);
 		if (!afnd->transiciones[i]){
-			for (i-=1 ; i >= 0; i--)
+			for (i --; i >= 0; i--)
 				free(afnd->transiciones[i]);
 			free(afnd->transiciones);
 			free(afnd->cadena_entrada);
@@ -108,6 +103,24 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 			free(afnd->nombre);
 			free(afnd);
 			return NULL;
+		}
+		for (j = 0; j < num_simbolos; j++){
+			afnd->transiciones[i][j] = (short *) malloc(sizeof(short)*num_estados);
+			if (!afnd->transiciones[i][j]){
+				for (j --; j >= 0; j--)
+					free(afnd->transiciones[i][j]);
+				free(afnd->transiciones[i]);
+				free(afnd->transiciones);
+				free(afnd->cadena_entrada);
+				free(afnd->estados_actuales);
+				free(afnd->estados);
+				AlfabetoElimina(afnd->alfabeto);
+				free(afnd->nombre);
+				free(afnd);
+				return NULL;
+			}
+			for (k = 0; k < num_estados; k++)
+				afnd->transiciones[i][j][k] = 0;
 		}
 	}
 
@@ -162,9 +175,8 @@ void imprimeFuncionesTransicion(FILE *fd, AFND *p_afnd){
 			fprintf(fd, "\n\tf(%s,%s)={", getNombre(p_afnd->estados[i]),
 									  simbolos[j]);
 			for (k = 0; k < p_afnd->num_estados; k++)
-				if (p_afnd->transiciones[i][k])
-					if (!strcmp(p_afnd->transiciones[i][k], simbolos[j]))
-						fprintf(fd, " %s", getNombre(p_afnd->estados[k]));
+				if (p_afnd->transiciones[i][j][k] == 1)
+					fprintf(fd, " %s", getNombre(p_afnd->estados[k]));
 			
 		fprintf(fd, " }");
 		}
@@ -198,22 +210,40 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
                              char * nombre_simbolo_entrada, 
                              char * nombre_estado_f ){
 
-	int i, j;
+	int i, j, k, flag, num_simbolos;
+	char **simbolos;
 
 	if (!p_afnd || !nombre_estado_i || ! nombre_simbolo_entrada || !nombre_estado_f)
 		return NULL;
 
-	for (i = 0; i < p_afnd->num_estados; i++)
-		if (!strcmp(nombre_estado_i, getNombre(p_afnd->estados[i])))
-			for (j = 0; j < p_afnd->num_estados; j++)
-				if (!strcmp(nombre_estado_f, getNombre(p_afnd->estados[j]))){
-					p_afnd->transiciones[i][j] = (char *) malloc(sizeof(char)*(strlen(nombre_simbolo_entrada)+1));
-					if (!p_afnd->transiciones[i][j]) return NULL;
-					
-					if (strcpy(p_afnd->transiciones[i][j], nombre_simbolo_entrada) < 0) return NULL;
-					return p_afnd;
-				}
+	simbolos = AlfabetoGetSimbolos(p_afnd->alfabeto);
+	num_simbolos = AlfabetoGetNumSimbolos(p_afnd->alfabeto);
 
+	flag = 0;
+	for (j = 0, flag = 0; j < p_afnd->num_estados && flag < 2; j++){
+		if (!strcmp(nombre_estado_i, getNombre(p_afnd->estados[j]))){
+			i = j;
+			flag ++;
+		}
+		if (!strcmp(nombre_estado_f, getNombre(p_afnd->estados[j]))){
+			k = j;
+			flag ++;
+		}
+	}
+	if (flag < 2)
+		return NULL;
+
+	for (j = 0, flag = 0; j < num_simbolos && flag == 0; j++){
+		printf("%s\n", simbolos[j]);
+		if (!strcmp(nombre_simbolo_entrada, simbolos[j]))
+			flag = 1;
+	}
+	if (flag == 0)
+		return NULL;
+
+	printf("%d %d %d\n", i, j, k);
+	p_afnd->transiciones[i][--j][k] = 1;
+			
 	return NULL;
 }
 
