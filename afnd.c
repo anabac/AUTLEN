@@ -20,7 +20,7 @@ struct _AFND {
 	int num_estados_actuales;
 	Estado **estados_actuales;
 
-	int simbolo_actual;
+	char *simbolo_actual;
 	Palabra *cadena_entrada;
 
 	short ***transiciones;
@@ -127,7 +127,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 	afnd->max_estados = num_estados;
 	afnd->num_estados = 0;
 	afnd->num_estados_actuales = 0;
-	afnd->simbolo_actual = 0;
+	afnd->simbolo_actual = NULL;
 
 	return afnd;
 }
@@ -137,8 +137,6 @@ void AFNDElimina(AFND * p_afnd){
 
 	if (!p_afnd) return;
 
-	for (i = 0; i < p_afnd->num_estados_actuales; i++)
-		EstadoElimina(p_afnd->estados_actuales[i]);
 	free(p_afnd->estados_actuales);
 	
 	for (i = 0; i < p_afnd->num_estados; i++)
@@ -146,6 +144,7 @@ void AFNDElimina(AFND * p_afnd){
 	free(p_afnd->estados);
 
 	AlfabetoElimina(p_afnd->alfabeto);
+	PalabraElimina(p_afnd->cadena_entrada);
 	free(p_afnd->nombre);
 	free(p_afnd);
 }
@@ -234,14 +233,12 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
 		return NULL;
 
 	for (j = 0, flag = 0; j < num_simbolos && flag == 0; j++){
-		printf("%s\n", simbolos[j]);
 		if (!strcmp(nombre_simbolo_entrada, simbolos[j]))
 			flag = 1;
 	}
 	if (flag == 0)
 		return NULL;
 
-	printf("%d %d %d\n", i, j, k);
 	p_afnd->transiciones[i][--j][k] = 1;
 			
 	return NULL;
@@ -290,10 +287,13 @@ AFND * AFNDInicializaEstado (AFND * p_afnd){
 
 	if (!p_afnd) return NULL;
 
-	for (i = 0; i < p_afnd->num_estados; i++)
+	for (i = 0; i < p_afnd->num_estados; i++){
 		if (getTipoEstado(p_afnd->estados[i]) == INICIAL ||
-			getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL)
+			getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL){
 			p_afnd->estados_actuales[p_afnd->num_estados_actuales] = p_afnd->estados[i];
+			p_afnd->num_estados_actuales++;
+		}
+	}
 
 	return p_afnd;
 
@@ -302,8 +302,60 @@ AFND * AFNDInicializaEstado (AFND * p_afnd){
 // TODO: Implementar estas funciones
 
 void AFNDProcesaEntrada(FILE * fd, AFND * p_afnd){
+	char * simbolo_actual;
+	int i;
+
+	if (!fd || !p_afnd) return;
+
+	p_afnd->simbolo_actual = procesarSimbolo(p_afnd->cadena_entrada);
+	while (p_afnd->simbolo_actual) {
+		AFNDTransita(p_afnd);
+
+		AFNDImprimeConjuntoEstadosActual(fd, p_afnd);
+		imprimeCadena(fd, p_afnd->cadena_entrada);
+		fprintf(fd, "\n");
+
+		free(p_afnd->simbolo_actual);
+		p_afnd->simbolo_actual = procesarSimbolo(p_afnd->cadena_entrada);
+	}
 
 }
 void AFNDTransita(AFND * p_afnd){
+	int i, j, k, m, flag;
+	int num_simbolos;
+	char **simbolos;
+	int num_nuevos_estados;
+	Estado **nuevos_estados;
+	short *transiciones;
 
+	if (!p_afnd) return;
+
+	nuevos_estados = (Estado **) malloc(p_afnd->num_estados * sizeof(Estado *));
+	if (!nuevos_estados) return;
+	num_nuevos_estados = 0;
+
+	num_simbolos = AlfabetoGetNumSimbolos(p_afnd->alfabeto);
+	simbolos = AlfabetoGetSimbolos(p_afnd->alfabeto);
+	for (j = 0, flag = 0; j < num_simbolos && flag == 0; j++)
+		if (!strcmp(p_afnd->simbolo_actual, simbolos[j]))
+			flag = 1;
+	j--;
+
+	for (k = 0; k < p_afnd->num_estados_actuales; k++){
+		for (i = 0, flag = 0; i < p_afnd->num_estados && flag == 0; i++)
+			if (!strcmp(getNombre(p_afnd->estados[i]), getNombre(p_afnd->estados_actuales[k])))
+				flag = 1;
+		i--;
+		
+		transiciones = p_afnd->transiciones[i][j];
+		for (m = 0;  m < p_afnd->num_estados; m++)
+			if (transiciones[m]){
+				nuevos_estados[num_nuevos_estados] = p_afnd->estados[m];
+				num_nuevos_estados ++;
+			}
+	}
+
+	free(p_afnd->estados_actuales);
+	p_afnd->estados_actuales = nuevos_estados;
+	p_afnd->num_estados_actuales = num_nuevos_estados;
 }

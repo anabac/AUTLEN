@@ -26,8 +26,9 @@ void PalabraElimina(Palabra *p){
 	if (!p) return;
 
 	for (i = 0; i < p->longitud; i++){
-		free(p->letras);
+		free(p->letras[i]);
 	}
+
 	free(p->letras);
 	free(p);
 }
@@ -37,7 +38,7 @@ Palabra *PalabraInsertaLetra(Palabra *p, char *l){
 
 	if (!p | !l) return NULL;
 
-	letra = (char *) malloc(strlen(l) * sizeof(char));
+	letra = (char *) malloc((strlen(l) + 1) * sizeof(char));
 	if (!letra) return NULL;
 
 	if (strcpy(letra, l) < 0){
@@ -66,4 +67,23 @@ void imprimeCadena(FILE *f, Palabra *p){
 	for (i = 0; i < p->longitud; i++)
 		fprintf(f, " %s", p->letras[i]);
 	fprintf(f, "]\n");
+}
+
+char *procesarSimbolo(Palabra *p){
+	char *simbolo;
+	
+	if (p->longitud <= 0) return NULL;
+	
+	simbolo = (char *) malloc(sizeof(char) * (strlen(p->letras[0]) + 1));
+	if (!simbolo) return NULL;
+	if (strcpy(simbolo, p->letras[0]) < 0){
+		free(simbolo);
+		return NULL;
+	}
+	
+	free(p->letras[0]);
+	p->letras ++;
+	p->longitud --;
+
+	return simbolo;
 }

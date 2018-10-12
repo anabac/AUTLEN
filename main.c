@@ -64,27 +64,27 @@ int main(int argc, char ** argv)
     AFNDProcesaEntrada(stdout,p_afnd);
 
 
-/* DEFINICIÓN DE LA CADENA DE ENTRADA [ 0 1 1 0 0 ] */
-    p_afnd= AFNDInsertaLetra(p_afnd,"0");
-    p_afnd= AFNDInsertaLetra(p_afnd,"1");
-    p_afnd= AFNDInsertaLetra(p_afnd,"1");
-    p_afnd= AFNDInsertaLetra(p_afnd,"0");
-    p_afnd= AFNDInsertaLetra(p_afnd,"0");
+// /* DEFINICIÓN DE LA CADENA DE ENTRADA [ 0 1 1 0 0 ] */
+//     p_afnd= AFNDInsertaLetra(p_afnd,"0");
+//     p_afnd= AFNDInsertaLetra(p_afnd,"1");
+//     p_afnd= AFNDInsertaLetra(p_afnd,"1");
+//     p_afnd= AFNDInsertaLetra(p_afnd,"0");
+//     p_afnd= AFNDInsertaLetra(p_afnd,"0");
 
-/* SE ESTABLECE COMO ESTADO ACTUAL DEL AUTÓMATA EL INICIAL */
+// /* SE ESTABLECE COMO ESTADO ACTUAL DEL AUTÓMATA EL INICIAL */
 
-    AFNDInicializaEstado (p_afnd);
+//     AFNDInicializaEstado (p_afnd);
 
-/* SE MUESTRA LA CADENA ACTUAL */
+// /* SE MUESTRA LA CADENA ACTUAL */
 
-    fprintf(stdout,"\n**************** PROCESA CADENA *************\n");
-    AFNDImprimeCadenaActual(stdout,p_afnd);
-    fprintf(stdout,"\n*********************************************\n");
+//     fprintf(stdout,"\n**************** PROCESA CADENA *************\n");
+//     AFNDImprimeCadenaActual(stdout,p_afnd);
+//     fprintf(stdout,"\n*********************************************\n");
 
 
-/* SE PROCESA LA CADENA DE ENTRADA ACTUAL MOSTRANDO UNA TRAZA DEL FUNCIONAMIENTO DEL AUTOMATA: EN CADA PASO DE ANÁLISIS SE MUESTRA LA CADENA ACTUAL Y EL CONJUNTO DE ESTADOS EN LOS QUE SE ENCUENTRA EL AUTÓMATA */
+// /* SE PROCESA LA CADENA DE ENTRADA ACTUAL MOSTRANDO UNA TRAZA DEL FUNCIONAMIENTO DEL AUTOMATA: EN CADA PASO DE ANÁLISIS SE MUESTRA LA CADENA ACTUAL Y EL CONJUNTO DE ESTADOS EN LOS QUE SE ENCUENTRA EL AUTÓMATA */
 
-    AFNDProcesaEntrada(stdout,p_afnd);
+//     AFNDProcesaEntrada(stdout,p_afnd);
 
 /* SE LIBERAN TODOS LOS RECURSOS ASOCIADOS CON EL AFND */
     AFNDElimina(p_afnd);

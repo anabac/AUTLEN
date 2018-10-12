@@ -7,6 +7,6 @@ Palabra *PalabraNuevo();
 void PalabraElimina(Palabra *p);
 Palabra *PalabraInsertaLetra(Palabra *p, char *l);
 void imprimeCadena(FILE *f, Palabra *p);
-
+char *procesarSimbolo(Palabra *p);
 
 #endif
