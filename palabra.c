@@ -6,6 +6,7 @@
 struct _Palabra {
 	char **letras;
 	int longitud;
+	int simbolo_actual;
 };
 
 Palabra *PalabraNuevo(){
@@ -16,6 +17,7 @@ Palabra *PalabraNuevo(){
 
 	p->letras = NULL;
 	p->longitud = 0;
+	p->simbolo_actual = 0;
 
 	return p;
 }
@@ -46,7 +48,13 @@ Palabra *PalabraInsertaLetra(Palabra *p, char *l){
 		return NULL;
 	}
 	
-	p->letras = (char **) realloc(p->letras, (p->longitud + 1) * sizeof(char *));
+	// if (!p->letras)
+	// 	// p->letras = (char **) malloc(sizeof(char *));
+	// 	p->letras = (char **) realloc(NULL, (p->longitud + 1) * sizeof(char *));
+
+	// else
+		p->letras = (char **) realloc(p->letras, (p->longitud + 1) * sizeof(char *));
+
 	if (!p->letras){
 		free(letra);
 		return NULL;
@@ -63,27 +71,15 @@ void imprimeCadena(FILE *f, Palabra *p){
 
 	if (!p || !f) return;
 
-	fprintf(f, "[(%d)", p->longitud);
-	for (i = 0; i < p->longitud; i++)
+	fprintf(f, "[(%d)", p->longitud - p->simbolo_actual);
+	for (i = p->simbolo_actual; i < p->longitud; i++)
 		fprintf(f, " %s", p->letras[i]);
 	fprintf(f, "]\n");
 }
 
-char *procesarSimbolo(Palabra *p){
-	char *simbolo;
-	
-	if (p->longitud <= 0) return NULL;
-	
-	simbolo = (char *) malloc(sizeof(char) * (strlen(p->letras[0]) + 1));
-	if (!simbolo) return NULL;
-	if (strcpy(simbolo, p->letras[0]) < 0){
-		free(simbolo);
+char *procesarSimbolo(Palabra *p){	
+	if (p->longitud <= p->simbolo_actual) 
 		return NULL;
-	}
 	
-	free(p->letras[0]);
-	p->letras ++;
-	p->longitud --;
-
-	return simbolo;
+	return p->letras[p->simbolo_actual++];
 }

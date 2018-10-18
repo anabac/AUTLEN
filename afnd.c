@@ -34,18 +34,21 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 	afnd = (AFND *) malloc(sizeof(AFND));
 	if (!afnd) return NULL;
 
+	// Reservar para el nombre del automata
 	afnd->nombre = (char *) malloc((strlen(nombre)+1) * sizeof(char));
 	if (!afnd->nombre){
 		free(afnd);
 		return NULL;
 	}
 
+	// Asignacion del nombre del automata
 	if (strcpy(afnd->nombre, nombre) < 0){
 		free(afnd->nombre);
 		free(afnd);
 		return NULL;
 	}
 
+	// Creacion del alfabeto del automata con num_simbolos
 	afnd->alfabeto = AlfabetoNuevo(num_simbolos);
 	if (!afnd->alfabeto){
 		free(afnd->nombre);
@@ -53,6 +56,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		return NULL;
 	}
 
+	// Reserva de un array de num_estados estados
 	afnd->estados = (Estado **) malloc(num_estados * sizeof(Estado *));
 	if (!afnd->estados){
 		AlfabetoElimina(afnd->alfabeto);
@@ -61,6 +65,8 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		return NULL;
 	}
 
+	// Reserva de un array de num_estados para los estados 
+	// de cada paso del proceso del automata
 	afnd->estados_actuales = (Estado **) malloc(num_estados * sizeof(Estado *));
 	if (!afnd->estados_actuales){
 		free(afnd->estados);
@@ -70,6 +76,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		return NULL;
 	}
 
+	// Inicializacion de la cadena de entrada del automata
 	afnd->cadena_entrada = PalabraNuevo();
 	if (!afnd->cadena_entrada){
 		free(afnd->estados_actuales);
@@ -80,6 +87,11 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		return NULL;
 	}
 
+	// Reserva una matriz cubica de dimensiones
+	// num_estados x num_simbolos x num_estados 
+	// para guardar las transiciones entre estados del automata
+
+	// Eje estado origen
 	afnd->transiciones = (short ***) malloc(sizeof(short **)*num_estados);
 	if (!afnd->transiciones){
 		free(afnd->cadena_entrada);
@@ -90,6 +102,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		free(afnd);
 		return NULL;
 	}
+	// Eje simbolo
 	for (i = 0; i < num_estados; i++){
 		afnd->transiciones[i] = (short **) malloc(sizeof(short *)*num_simbolos);
 		if (!afnd->transiciones[i]){
@@ -104,6 +117,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 			free(afnd);
 			return NULL;
 		}
+		// Eje estado destino
 		for (j = 0; j < num_simbolos; j++){
 			afnd->transiciones[i][j] = (short *) malloc(sizeof(short)*num_estados);
 			if (!afnd->transiciones[i][j]){
@@ -119,11 +133,13 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 				free(afnd);
 				return NULL;
 			}
+			// Inicializacion a 0
 			for (k = 0; k < num_estados; k++)
 				afnd->transiciones[i][j][k] = 0;
 		}
 	}
 
+	// Inicializacion de variables propias del automata
 	afnd->max_estados = num_estados;
 	afnd->num_estados = 0;
 	afnd->num_estados_actuales = 0;
@@ -133,7 +149,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 }
 
 void AFNDElimina(AFND * p_afnd){
-	int i;
+	int i, j;
 
 	if (!p_afnd) return;
 
@@ -142,6 +158,13 @@ void AFNDElimina(AFND * p_afnd){
 	for (i = 0; i < p_afnd->num_estados; i++)
 		EstadoElimina(p_afnd->estados[i]);
 	free(p_afnd->estados);
+
+	for (i = 0; i < p_afnd->num_estados; i++){
+		for(j = 0; j < AlfabetoGetNumSimbolos(p_afnd->alfabeto); j++)
+			free(p_afnd->transiciones[i][j]);
+		free(p_afnd->transiciones[i]);
+	}
+	free(p_afnd->transiciones);
 
 	AlfabetoElimina(p_afnd->alfabeto);
 	PalabraElimina(p_afnd->cadena_entrada);
@@ -268,12 +291,18 @@ void AFNDImprimeConjuntoEstadosActual(FILE * fd, AFND * p_afnd){
 	int i;
 
 	if (!p_afnd || !fd) return;
-	if (!p_afnd->num_estados_actuales) return;
 
-	fprintf(fd, "ACTUALMENTE EN {");
-	for (i = 0; i < p_afnd->num_estados_actuales; i++)
+	if (!p_afnd->num_estados_actuales){
+		fprintf(fd, "CADENA RECHAZADA\n");
+		return;
+	}
+
+	fprintf(fd, "ACTUALMENTE EN { ");
+	for (i = 0; i < p_afnd->num_estados_actuales; i++){
 		EstadoImprime(fd, p_afnd->estados_actuales[i]);
-	fprintf(fd, " }\n");
+		fprintf(fd, " ");
+	}
+	fprintf(fd, "}\n");
 }
 
 void AFNDImprimeCadenaActual(FILE *fd, AFND * p_afnd){
@@ -287,11 +316,12 @@ AFND * AFNDInicializaEstado (AFND * p_afnd){
 
 	if (!p_afnd) return NULL;
 
+	p_afnd->num_estados_actuales = 0;
 	for (i = 0; i < p_afnd->num_estados; i++){
 		if (getTipoEstado(p_afnd->estados[i]) == INICIAL ||
 			getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL){
 			p_afnd->estados_actuales[p_afnd->num_estados_actuales] = p_afnd->estados[i];
-			p_afnd->num_estados_actuales++;
+			p_afnd->num_estados_actuales ++;
 		}
 	}
 
@@ -299,25 +329,42 @@ AFND * AFNDInicializaEstado (AFND * p_afnd){
 
 }
 
-// TODO: Implementar estas funciones
+void reiniciaCadena(AFND *p_afnd){
+
+	if (!p_afnd) return;
+
+	PalabraElimina(p_afnd->cadena_entrada);
+	p_afnd->cadena_entrada = PalabraNuevo();
+}
 
 void AFNDProcesaEntrada(FILE * fd, AFND * p_afnd){
 	char * simbolo_actual;
 	int i;
 
 	if (!fd || !p_afnd) return;
-
+	
+	AFNDImprimeConjuntoEstadosActual(fd, p_afnd);
+	imprimeCadena(fd, p_afnd->cadena_entrada);
+	fprintf(fd, "\n");
+	
 	p_afnd->simbolo_actual = procesarSimbolo(p_afnd->cadena_entrada);
 	while (p_afnd->simbolo_actual) {
 		AFNDTransita(p_afnd);
 
 		AFNDImprimeConjuntoEstadosActual(fd, p_afnd);
+		
+		if (p_afnd->num_estados_actuales == 0){
+			reiniciaCadena(p_afnd);
+			return;
+		} 
+		
 		imprimeCadena(fd, p_afnd->cadena_entrada);
 		fprintf(fd, "\n");
 
-		free(p_afnd->simbolo_actual);
 		p_afnd->simbolo_actual = procesarSimbolo(p_afnd->cadena_entrada);
 	}
+
+	reiniciaCadena(p_afnd);
 
 }
 void AFNDTransita(AFND * p_afnd){
