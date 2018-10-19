@@ -9,21 +9,21 @@
 
 
 struct _AFND {
-	char *nombre;
+	char *nombre; // nombre del automata
 
-	int max_estados;
-	int num_estados;
-	Estado **estados;
+	int max_estados; // numero maximo de estados
+	int num_estados;  // numero actual de estados
+	Estado **estados;  // coleccion de estados
 
-	Alfabeto *alfabeto;
+	Alfabeto *alfabeto;  // alfabeto 
 
-	int num_estados_actuales;
-	Estado **estados_actuales;
+	int num_estados_actuales;  // numero de estados actuales
+	Estado **estados_actuales;  // coleccion de estados actuales
 
-	char *simbolo_actual;
-	Palabra *cadena_entrada;
+	char *simbolo_actual;  // simbolo que se esta procesando
+	Palabra *cadena_entrada;  // palabra de entrada
 
-	short ***transiciones;
+	short ***transiciones;  // matriz cubica para transiciones
 };
 
 
@@ -76,7 +76,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		return NULL;
 	}
 
-	// Inicializacion de la cadena de entrada del automata
+	// Reserva para la cadena de entrada del automata
 	afnd->cadena_entrada = PalabraNuevo();
 	if (!afnd->cadena_entrada){
 		free(afnd->estados_actuales);
@@ -155,10 +155,12 @@ void AFNDElimina(AFND * p_afnd){
 
 	free(p_afnd->estados_actuales);
 	
+	// Eliminacion de todos los estados
 	for (i = 0; i < p_afnd->num_estados; i++)
 		EstadoElimina(p_afnd->estados[i]);
 	free(p_afnd->estados);
 
+	// Eliminacion de la matriz cubica de transiciones
 	for (i = 0; i < p_afnd->num_estados; i++){
 		for(j = 0; j < AlfabetoGetNumSimbolos(p_afnd->alfabeto); j++)
 			free(p_afnd->transiciones[i][j]);
@@ -189,30 +191,41 @@ void imprimeFuncionesTransicion(FILE *fd, AFND *p_afnd){
 
 	if (!fd || !p_afnd) return;
 
+	// Tomamos los simbolos del alfabeto del automata
 	simbolos = AlfabetoGetSimbolos(p_afnd->alfabeto);
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd->alfabeto);
 	
-	for (i = 0; i < p_afnd->num_estados; i++)
+	// Recorremos los estados 
+	for (i = 0; i < p_afnd->num_estados; i++){
+		// Por cada estado, los simbolos del alfabeto
 		for (j = 0; j < num_simbolos; j++){
 			fprintf(fd, "\n\tf(%s,%s)={", getNombre(p_afnd->estados[i]),
 									  simbolos[j]);
+			// Y buscamos si existe una transicion con esas entradas
 			for (k = 0; k < p_afnd->num_estados; k++)
 				if (p_afnd->transiciones[i][j][k] == 1)
 					fprintf(fd, " %s", getNombre(p_afnd->estados[k]));
 			
 		fprintf(fd, " }");
 		}
+	}
 }
 
 void AFNDImprime(FILE * fd, AFND* p_afnd){
 	if (!fd | !p_afnd) return;
 
 	fprintf(fd, "%s={\n\t", p_afnd->nombre);
+	
+	// Imprimos el nombre del automata
 	AlfabetoImprime(fd, p_afnd->alfabeto);
 	fprintf(fd, "\n\t");
+	
+	// La informacion de los estados
 	fprintf(fd, "num_estados = %d\n", p_afnd->num_estados);
 	fprintf(fd, "\n\t");
 	imprimeEstados(fd, p_afnd);
+	
+	// Y la funcion de transicion
 	fprintf(fd, "\nFunción de Transición = {\n");
 	imprimeFuncionesTransicion(fd, p_afnd);
 	fprintf(fd, "\n  }\n");
@@ -238,9 +251,12 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
 	if (!p_afnd || !nombre_estado_i || ! nombre_simbolo_entrada || !nombre_estado_f)
 		return NULL;
 
+	// Tomamos los simbolos del alfabeto del automata
 	simbolos = AlfabetoGetSimbolos(p_afnd->alfabeto);
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd->alfabeto);
 
+	// Recorremos la lista de estados del automata para encontrar
+	// los indices del estado inicial (i) y el final (k)
 	flag = 0;
 	for (j = 0, flag = 0; j < p_afnd->num_estados && flag < 2; j++){
 		if (!strcmp(nombre_estado_i, getNombre(p_afnd->estados[j]))){
@@ -255,6 +271,8 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
 	if (flag < 2)
 		return NULL;
 
+	// Recorremos la lista de simbolos para encontrar el indice 
+	// del simbolo en la transicion (j)
 	for (j = 0, flag = 0; j < num_simbolos && flag == 0; j++){
 		if (!strcmp(nombre_simbolo_entrada, simbolos[j]))
 			flag = 1;
@@ -262,6 +280,7 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
 	if (flag == 0)
 		return NULL;
 
+	// Modificamos la matriz de transiciones segun los indices
 	p_afnd->transiciones[i][--j][k] = 1;
 			
 	return NULL;
@@ -270,6 +289,7 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
 AFND * AFNDInsertaLetra(AFND * p_afnd, char * letra){
 
 	if (!p_afnd || !letra) return NULL;
+	// Insertamos la letra en la cadena de entrada del automata
 	if (!PalabraInsertaLetra(p_afnd->cadena_entrada, letra)) return NULL;
 
 	return p_afnd;
@@ -280,6 +300,7 @@ AFND * AFNDInsertaEstado(AFND * p_afnd, char * nombre, int tipo){
 	if (!p_afnd || !nombre || tipo < 0 || tipo > 3) return NULL;
 	if (p_afnd->max_estados <= p_afnd->num_estados) return NULL;
 
+	// Creacion e insercion del estado en la coleccion de estados
 	p_afnd->estados[p_afnd->num_estados] = EstadoNuevo(nombre, tipo);
 	if (!p_afnd->estados[p_afnd->num_estados]) return NULL;
 
@@ -292,12 +313,14 @@ void AFNDImprimeConjuntoEstadosActual(FILE * fd, AFND * p_afnd){
 
 	if (!p_afnd || !fd) return;
 
+	// Si no hay estados actuales, la cadena se marca como rechazada
 	if (!p_afnd->num_estados_actuales){
 		fprintf(fd, "CADENA RECHAZADA\n");
 		return;
 	}
 
 	fprintf(fd, "ACTUALMENTE EN { ");
+	// Por cada estado actual, se imprime este
 	for (i = 0; i < p_afnd->num_estados_actuales; i++){
 		EstadoImprime(fd, p_afnd->estados_actuales[i]);
 		fprintf(fd, " ");
@@ -317,6 +340,8 @@ AFND * AFNDInicializaEstado (AFND * p_afnd){
 	if (!p_afnd) return NULL;
 
 	p_afnd->num_estados_actuales = 0;
+	// Por cada estado, si este es inicial o inicial y final,
+	// se añade a la lista de estados actuales
 	for (i = 0; i < p_afnd->num_estados; i++){
 		if (getTipoEstado(p_afnd->estados[i]) == INICIAL ||
 			getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL){
@@ -333,6 +358,7 @@ void reiniciaCadena(AFND *p_afnd){
 
 	if (!p_afnd) return;
 
+	// Elimina y vuelve a crear la cadena de entrada del automata
 	PalabraElimina(p_afnd->cadena_entrada);
 	p_afnd->cadena_entrada = PalabraNuevo();
 }
@@ -343,16 +369,21 @@ void AFNDProcesaEntrada(FILE * fd, AFND * p_afnd){
 
 	if (!fd || !p_afnd) return;
 	
+	// Imprime la situacion inicial del automata
 	AFNDImprimeConjuntoEstadosActual(fd, p_afnd);
 	imprimeCadena(fd, p_afnd->cadena_entrada);
 	fprintf(fd, "\n");
 	
+	// Procesa el primer simbolo de la cadena de entrada
 	p_afnd->simbolo_actual = procesarSimbolo(p_afnd->cadena_entrada);
+	
+	// Mientras se pueda seguir procesando
 	while (p_afnd->simbolo_actual) {
 		AFNDTransita(p_afnd);
 
 		AFNDImprimeConjuntoEstadosActual(fd, p_afnd);
 		
+		// Si no existen estados actuales, se acaba el proceso
 		if (p_afnd->num_estados_actuales == 0){
 			reiniciaCadena(p_afnd);
 			return;
@@ -377,24 +408,33 @@ void AFNDTransita(AFND * p_afnd){
 
 	if (!p_afnd) return;
 
+	// Reserva para la nueva coleccion de estados actuales
 	nuevos_estados = (Estado **) malloc(p_afnd->num_estados * sizeof(Estado *));
 	if (!nuevos_estados) return;
 	num_nuevos_estados = 0;
 
+	// Toma los simbolos del alfabeto del automata
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd->alfabeto);
 	simbolos = AlfabetoGetSimbolos(p_afnd->alfabeto);
+	
+	// Recorre los simbolos para encontrar el indice (j) del simbolo actual
 	for (j = 0, flag = 0; j < num_simbolos && flag == 0; j++)
 		if (!strcmp(p_afnd->simbolo_actual, simbolos[j]))
 			flag = 1;
 	j--;
 
+	// Recorre los estados actuales del automata 
 	for (k = 0; k < p_afnd->num_estados_actuales; k++){
+		// Encuentra, por cada estado actual, su indice dentro de los estados (i)
 		for (i = 0, flag = 0; i < p_afnd->num_estados && flag == 0; i++)
 			if (!strcmp(getNombre(p_afnd->estados[i]), getNombre(p_afnd->estados_actuales[k])))
 				flag = 1;
 		i--;
 		
+		// Toma las transiciones desde el estado con el simbolo actual
 		transiciones = p_afnd->transiciones[i][j];
+		// Si existe alguna transicion, añade el nuevo estado a la lista de 
+		// nuevos estados actuales
 		for (m = 0;  m < p_afnd->num_estados; m++)
 			if (transiciones[m]){
 				nuevos_estados[num_nuevos_estados] = p_afnd->estados[m];
@@ -402,6 +442,7 @@ void AFNDTransita(AFND * p_afnd){
 			}
 	}
 
+	// Asignacion de los nuevos valores
 	free(p_afnd->estados_actuales);
 	p_afnd->estados_actuales = nuevos_estados;
 	p_afnd->num_estados_actuales = num_nuevos_estados;
