@@ -1,4 +1,0 @@
-
-
-- Cadena rechazada
-- Transiciones con matriz cubica
