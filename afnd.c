@@ -364,8 +364,6 @@ void reiniciaCadena(AFND *p_afnd){
 }
 
 void AFNDProcesaEntrada(FILE * fd, AFND * p_afnd){
-	char * simbolo_actual;
-	int i;
 
 	if (!fd || !p_afnd) return;
 	
