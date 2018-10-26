@@ -25,8 +25,24 @@ struct _AFND {
 	Palabra *cadena_entrada;  // palabra de entrada
 
 	short ***transiciones;  // matriz cubica para transiciones
+	short **lambdas;
 };
 
+
+int indiceDeEstado(AFND *p_afnd, char * nombre){
+	int i, flag = 0;
+
+	for (i = 0, flag = 0; i < p_afnd->num_estados && flag == 0; i++){
+		if (!strcmp(nombre, getNombre(p_afnd->estados[i])))
+			flag = 1;
+	}
+
+	if (!flag)
+		return -1;
+
+	return i;
+
+}
 
 AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 	AFND *afnd;
@@ -105,7 +121,7 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 	}
 	// Eje simbolo
 	for (i = 0; i < num_estados; i++){
-		afnd->transiciones[i] = (short **) malloc(sizeof(short *)*num_simbolos);
+		afnd->transiciones[i] = (short **) malloc(sizeof(short *)*(num_simbolos));
 		if (!afnd->transiciones[i]){
 			for (i --; i >= 0; i--)
 				free(afnd->transiciones[i]);
@@ -140,6 +156,51 @@ AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos){
 		}
 	}
 
+	afnd->lambdas = (short **) malloc(sizeof(short *) * num_estados);
+	if (!afnd->lambdas){
+		for (i = 0; i < num_estados; i++){
+			for(j = 0; j < num_simbolos; j++)
+				free(afnd->transiciones[i][j]);
+			free(afnd->transiciones[i]);
+		}
+		free(afnd->transiciones);
+		free(afnd->cadena_entrada);
+		free(afnd->estados_actuales);
+		free(afnd->estados);
+		AlfabetoElimina(afnd->alfabeto);
+		free(afnd->nombre);
+		free(afnd);
+		return NULL;
+	}
+	for (i = 0; i < num_estados; i++){
+		afnd->lambdas[i] = (short *) malloc(sizeof(short) * num_estados);
+		if (!afnd->lambdas[i]){
+			for (i--; i >= 0; i--)
+				free(afnd->lambdas[i]);
+			free(afnd->lambdas);
+			for (i = 0; i < num_estados; i++){
+				for(j = 0; j < num_simbolos; j++)
+					free(afnd->transiciones[i][j]);
+				free(afnd->transiciones[i]);
+			}
+			free(afnd->transiciones);
+			free(afnd->cadena_entrada);
+			free(afnd->estados_actuales);
+			free(afnd->estados);
+			AlfabetoElimina(afnd->alfabeto);
+			free(afnd->nombre);
+			free(afnd);
+			return NULL;
+		}
+
+		for (k = 0; k < num_estados; k++){
+			if (i == k)
+				afnd->lambdas[i][k] = 1;
+			else
+				afnd->lambdas[i][k] = 0;
+		}
+	}
+
 	// Inicializacion de variables propias del automata
 	afnd->max_estados = num_estados;
 	afnd->num_estados = 0;
@@ -168,6 +229,10 @@ void AFNDElimina(AFND * p_afnd){
 		free(p_afnd->transiciones[i]);
 	}
 	free(p_afnd->transiciones);
+
+	for (i = 0; i < p_afnd->num_estados; i++)
+		free(p_afnd->lambdas[i]);
+	free(p_afnd->lambdas);
 
 	AlfabetoElimina(p_afnd->alfabeto);
 	PalabraElimina(p_afnd->cadena_entrada);
@@ -213,6 +278,9 @@ void imprimeFuncionesTransicion(FILE *fd, AFND *p_afnd){
 }
 
 void AFNDImprime(FILE * fd, AFND* p_afnd){
+	
+	int i, j;
+
 	if (!fd | !p_afnd) return;
 
 	fprintf(fd, "%s={\n\t", p_afnd->nombre);
@@ -225,6 +293,20 @@ void AFNDImprime(FILE * fd, AFND* p_afnd){
 	fprintf(fd, "num_estados = %d\n", p_afnd->num_estados);
 	fprintf(fd, "\n\t");
 	imprimeEstados(fd, p_afnd);
+
+	for (i = 0; i < p_afnd->num_estados; i++){
+		fprintf(fd, "\t[%d]", i);
+	}
+	fprintf(fd, "\n ");
+
+	for (i = 0; i < p_afnd->num_estados; i++){
+		fprintf(fd, "[%d]", i);
+		for (j = 0; j < p_afnd->num_estados; j++)
+			fprintf(fd, "\t%d", p_afnd->lambdas[i][j]);
+		fprintf(fd, "\n");
+	}
+	fprintf(fd, "\n");
+
 	
 	// Y la funcion de transicion
 	fprintf(fd, "\nFunción de Transición = {\n");
@@ -246,7 +328,7 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
                              char * nombre_simbolo_entrada, 
                              char * nombre_estado_f ){
 
-	int i, j, k, flag, num_simbolos;
+	int i, j, flag, k, num_simbolos;
 	char **simbolos;
 
 	if (!p_afnd || !nombre_estado_i || ! nombre_simbolo_entrada || !nombre_estado_f)
@@ -258,18 +340,12 @@ AFND * AFNDInsertaTransicion(AFND * p_afnd,
 
 	// Recorremos la lista de estados del automata para encontrar
 	// los indices del estado inicial (i) y el final (k)
-	flag = 0;
-	for (j = 0, flag = 0; j < p_afnd->num_estados && flag < 2; j++){
-		if (!strcmp(nombre_estado_i, getNombre(p_afnd->estados[j]))){
-			i = j;
-			flag ++;
-		}
-		if (!strcmp(nombre_estado_f, getNombre(p_afnd->estados[j]))){
-			k = j;
-			flag ++;
-		}
-	}
-	if (flag < 2)
+	i = indiceDeEstado(p_afnd, nombre_estado_i);
+	if (i == -1)
+		return NULL;
+
+	k = indiceDeEstado(p_afnd, nombre_estado_f);
+	if (k == -1)
 		return NULL;
 
 	// Recorremos la lista de simbolos para encontrar el indice 
@@ -445,4 +521,79 @@ void AFNDTransita(AFND * p_afnd){
 	free(p_afnd->estados_actuales);
 	p_afnd->estados_actuales = nuevos_estados;
 	p_afnd->num_estados_actuales = num_nuevos_estados;
+}
+
+AFND * AFNDInsertaLTransicion(
+       AFND * p_afnd, 
+       char * nombre_estado_i, 
+       char * nombre_estado_f ){
+
+	int i, j;
+	
+	if (!p_afnd || !nombre_estado_i || !nombre_estado_f) 
+		return NULL;
+
+
+	i = indiceDeEstado(p_afnd, nombre_estado_i);
+	if (i == -1) return NULL;
+	
+	j = indiceDeEstado(p_afnd, nombre_estado_f);
+	if (j == -1) return NULL;
+
+	p_afnd->lambdas[i][j] = 1;
+
+	return p_afnd;
+}
+
+void multiplicarMatrices(short **matriz_dest, short **matriz_src, int n){
+
+	int i, j;
+
+	if (!matriz_dest || !matriz_src) return;
+
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+			matriz_dest[i][j] = matriz_dest[i][j] | (matriz_dest[i][j] & matriz_src[j][i]);
+
+}
+
+AFND * AFNDCierraLTransicion (AFND * p_afnd){
+	int i, j;
+	short **matriz;
+
+	if (!p_afnd) return NULL;
+
+	matriz = (short **) malloc(sizeof(short *) * p_afnd->num_estados);
+	if (!matriz) return NULL;
+
+	for (i = 0; i < p_afnd-> num_estados; i ++){
+		matriz[i] = (short *) malloc(sizeof(short) * p_afnd->num_estados);
+		if (!matriz[i]){
+			for (i--; i >= 0; i--)
+				free(matriz[i]);
+			free(matriz);
+			return NULL;
+		}
+		for (j = 0; j < p_afnd->num_estados; j++)
+			matriz[i][j] = p_afnd->lambdas[i][j];
+	}
+
+
+
+	for (i = 0; i < p_afnd->num_estados; i++)
+		multiplicarMatrices(p_afnd->lambdas, matriz, p_afnd->num_estados);
+
+	for (i = 0; i < p_afnd->num_estados; i++)
+		free(matriz[i]);
+	free(matriz);
+
+	return p_afnd;
+}
+
+AFND * AFNDInicializaCadenaActual (AFND * p_afnd ){
+
+	if (!p_afnd) return NULL;
+
+	return p_afnd;
+
 }
