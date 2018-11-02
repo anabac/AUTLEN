@@ -28,6 +28,8 @@ struct _AFND {
 	short **lambdas;
 };
 
+int recursividad_maxima(AFND *p_afnd, Estado **sin_procesar, Estado **procesados, int num_procesados, int num_sin_procesar, int proc);
+void imprimeLTransiciones(FILE *fd, AFND *p_afnd);
 
 int indiceDeEstado(AFND *p_afnd, char * nombre){
 	int i, flag = 0;
@@ -40,7 +42,8 @@ int indiceDeEstado(AFND *p_afnd, char * nombre){
 	if (!flag)
 		return -1;
 
-	return i;
+	// CABANA TE ASESINO
+	return --i;
 
 }
 
@@ -279,8 +282,6 @@ void imprimeFuncionesTransicion(FILE *fd, AFND *p_afnd){
 
 void AFNDImprime(FILE * fd, AFND* p_afnd){
 	
-	int i, j;
-
 	if (!fd | !p_afnd) return;
 
 	fprintf(fd, "%s={\n\t", p_afnd->nombre);
@@ -294,19 +295,10 @@ void AFNDImprime(FILE * fd, AFND* p_afnd){
 	fprintf(fd, "\n\t");
 	imprimeEstados(fd, p_afnd);
 
-	for (i = 0; i < p_afnd->num_estados; i++){
-		fprintf(fd, "\t[%d]", i);
-	}
-	fprintf(fd, "\n ");
-
-	for (i = 0; i < p_afnd->num_estados; i++){
-		fprintf(fd, "[%d]", i);
-		for (j = 0; j < p_afnd->num_estados; j++)
-			fprintf(fd, "\t%d", p_afnd->lambdas[i][j]);
-		fprintf(fd, "\n");
-	}
-	fprintf(fd, "\n");
-
+	// Las transiciones lambda
+	fprintf(fd, "\nRL++*={\n");
+	imprimeLTransiciones(fd, p_afnd);
+	fprintf(fd, "}\n");
 	
 	// Y la funcion de transicion
 	fprintf(fd, "\nFunción de Transición = {\n");
@@ -411,10 +403,45 @@ void AFNDImprimeCadenaActual(FILE *fd, AFND * p_afnd){
 	imprimeCadena(fd, p_afnd->cadena_entrada);
 }
 
+int recursividad_maxima(AFND *p_afnd, Estado **sin_procesar, Estado **procesados, int num_procesados, int num_sin_procesar, int proc){
+	int i, j, index, flag;
+
+	if (!p_afnd) return 0;
+
+	// La recursividad para cuando no quedan mas estados actuales que procesar
+	if (num_sin_procesar == proc) return num_procesados;
+
+	// Cogemos el indice del primer estado actual sin procesar del automata
+	index = indiceDeEstado(p_afnd, getNombre(sin_procesar[num_sin_procesar]));
+	// Buscamos sus transiciones lambdas 
+	for (i = 0; i < p_afnd->num_estados; i++){
+		if (p_afnd->lambdas[index][i] && index != i){
+			flag = 0;
+			// Comprobamos que la transicion no se encuentre ya entre los estados actuales
+			for (j = 0; j < num_procesados && flag == 0; j++)
+				if (!strcmp(getNombre(p_afnd->estados[i]), getNombre(procesados[j])))
+					flag = 1;
+			// Si no se encuentra entre estos, lo aniadimos a la lista de no procesados
+			if (!flag){
+				sin_procesar[proc] = p_afnd->estados[i];
+				proc ++;
+			}
+		}
+	}
+
+	procesados[num_procesados] = p_afnd->estados[index];
+
+	return recursividad_maxima(p_afnd, sin_procesar, procesados, ++num_procesados, ++num_sin_procesar, proc);
+}
+
 AFND * AFNDInicializaEstado (AFND * p_afnd){
 	int i;
+	Estado **actuales;
 
 	if (!p_afnd) return NULL;
+
+	actuales = (Estado **) malloc(sizeof (Estado *) * p_afnd->num_estados);
+	if (!actuales) return NULL;
 
 	p_afnd->num_estados_actuales = 0;
 	// Por cada estado, si este es inicial o inicial y final,
@@ -426,6 +453,10 @@ AFND * AFNDInicializaEstado (AFND * p_afnd){
 			p_afnd->num_estados_actuales ++;
 		}
 	}
+
+	p_afnd->num_estados_actuales = recursividad_maxima(p_afnd, p_afnd->estados_actuales, actuales, 0, 0, p_afnd->num_estados_actuales);
+	free(p_afnd->estados_actuales);
+	p_afnd->estados_actuales = actuales;
 
 	return p_afnd;
 
@@ -478,7 +509,7 @@ void AFNDTransita(AFND * p_afnd){
 	int num_simbolos;
 	char **simbolos;
 	int num_nuevos_estados;
-	Estado **nuevos_estados;
+	Estado **nuevos_estados, **estados_lambdas;
 	short *transiciones;
 
 	if (!p_afnd) return;
@@ -486,6 +517,11 @@ void AFNDTransita(AFND * p_afnd){
 	// Reserva para la nueva coleccion de estados actuales
 	nuevos_estados = (Estado **) malloc(p_afnd->num_estados * sizeof(Estado *));
 	if (!nuevos_estados) return;
+	estados_lambdas = (Estado **) malloc(p_afnd->num_estados * sizeof(Estado *));
+	if (!estados_lambdas){
+		free(nuevos_estados);
+		return;
+	}
 	num_nuevos_estados = 0;
 
 	// Toma los simbolos del alfabeto del automata
@@ -521,6 +557,13 @@ void AFNDTransita(AFND * p_afnd){
 	free(p_afnd->estados_actuales);
 	p_afnd->estados_actuales = nuevos_estados;
 	p_afnd->num_estados_actuales = num_nuevos_estados;
+
+	// Transiciones lambda
+	num_nuevos_estados = 0;
+	p_afnd->num_estados_actuales = recursividad_maxima(p_afnd, p_afnd->estados_actuales, estados_lambdas, 0, 0, p_afnd->num_estados_actuales);
+	free(p_afnd->estados_actuales);
+	p_afnd->estados_actuales = estados_lambdas;
+
 }
 
 AFND * AFNDInsertaLTransicion(
@@ -595,5 +638,24 @@ AFND * AFNDInicializaCadenaActual (AFND * p_afnd ){
 	if (!p_afnd) return NULL;
 
 	return p_afnd;
+
+}
+
+void imprimeLTransiciones(FILE *fd, AFND *p_afnd){
+	int i, j;
+
+	if  (!fd || !p_afnd) return;
+
+	fprintf(fd, "\t   ");
+	for (i = 0; i < p_afnd->num_estados; i++)
+		fprintf(fd, "[%d] ", i);
+
+	fprintf(fd, "\n");
+	for (i = 0; i < p_afnd->num_estados; i++){
+		fprintf(fd, "\t[%d] ", i);
+		for (j = 0; j < p_afnd->num_estados; j++)
+			fprintf(fd, "%d   ", p_afnd->lambdas[i][j]);
+		fprintf(fd, "\n");
+	}
 
 }
