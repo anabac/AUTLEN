@@ -601,36 +601,49 @@ void multiplicarMatrices(short **matriz_dest, short **matriz_src, int n){
 }
 
 AFND * AFNDCierraLTransicion (AFND * p_afnd){
-	int i, j;
-	short **matriz;
+	int i, j, k;
 
 	if (!p_afnd) return NULL;
 
-	matriz = (short **) malloc(sizeof(short *) * p_afnd->num_estados);
-	if (!matriz) return NULL;
-
-	for (i = 0; i < p_afnd-> num_estados; i ++){
-		matriz[i] = (short *) malloc(sizeof(short) * p_afnd->num_estados);
-		if (!matriz[i]){
-			for (i--; i >= 0; i--)
-				free(matriz[i]);
-			free(matriz);
-			return NULL;
-		}
+	for (i = 0; i < p_afnd->num_estados; i++)
 		for (j = 0; j < p_afnd->num_estados; j++)
-			matriz[i][j] = p_afnd->lambdas[i][j];
-	}
-
-
-
-	for (i = 0; i < p_afnd->num_estados; i++)
-		multiplicarMatrices(p_afnd->lambdas, matriz, p_afnd->num_estados);
-
-	for (i = 0; i < p_afnd->num_estados; i++)
-		free(matriz[i]);
-	free(matriz);
+			if (p_afnd->lambdas[i][j])
+				for (k = 0; k < p_afnd->num_estados; k++)
+					if (p_afnd->lambdas[j][k])
+						p_afnd->lambdas[i][k] = 1;
 
 	return p_afnd;
+
+	// int i, j;
+	// short **matriz;
+
+	// if (!p_afnd) return NULL;
+
+	// matriz = (short **) malloc(sizeof(short *) * p_afnd->num_estados);
+	// if (!matriz) return NULL;
+
+	// for (i = 0; i < p_afnd-> num_estados; i ++){
+	// 	matriz[i] = (short *) malloc(sizeof(short) * p_afnd->num_estados);
+	// 	if (!matriz[i]){
+	// 		for (i--; i >= 0; i--)
+	// 			free(matriz[i]);
+	// 		free(matriz);
+	// 		return NULL;
+	// 	}
+	// 	for (j = 0; j < p_afnd->num_estados; j++)
+	// 		matriz[i][j] = p_afnd->lambdas[i][j];
+	// }
+
+
+
+	// for (i = 0; i < p_afnd->num_estados; i++)
+	// 	multiplicarMatrices(p_afnd->lambdas, matriz, p_afnd->num_estados);
+
+	// for (i = 0; i < p_afnd->num_estados; i++)
+	// 	free(matriz[i]);
+	// free(matriz);
+
+	// return p_afnd;
 }
 
 AFND * AFNDInicializaCadenaActual (AFND * p_afnd ){
