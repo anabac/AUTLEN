@@ -418,6 +418,9 @@ int recursividad_maxima(AFND *p_afnd, Estado **sin_procesar, Estado **procesados
 		if (p_afnd->lambdas[index][i] && index != i){
 			flag = 0;
 			// Comprobamos que la transicion no se encuentre ya entre los estados actuales
+			for (j = 0; j < proc && flag == 0; j++)
+				if (!strcmp(getNombre(sin_procesar[j]), getNombre(p_afnd->estados[i])))
+					flag = 1;
 			for (j = 0; j < num_procesados && flag == 0; j++)
 				if (!strcmp(getNombre(p_afnd->estados[i]), getNombre(procesados[j])))
 					flag = 1;
