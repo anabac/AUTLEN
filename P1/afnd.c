@@ -604,16 +604,25 @@ void multiplicarMatrices(short **matriz_dest, short **matriz_src, int n){
 }
 
 AFND * AFNDCierraLTransicion (AFND * p_afnd){
-	int i, j, k;
+	int i, j, k, m;
 
 	if (!p_afnd) return NULL;
 
-	for (i = 0; i < p_afnd->num_estados; i++)
-		for (j = 0; j < p_afnd->num_estados; j++)
-			if (p_afnd->lambdas[i][j])
-				for (k = 0; k < p_afnd->num_estados; k++)
+	for (i = 0; i < p_afnd->num_estados; i++){
+		for (j = 0; j < p_afnd->num_estados; j++){
+			if (p_afnd->lambdas[i][j]){
+				m = 0;
+				for (k = 0; k < p_afnd->num_estados; k++){
 					if (p_afnd->lambdas[j][k])
 						p_afnd->lambdas[i][k] = 1;
+					if (k < j)
+						m = j- k;
+				}
+				if (m) j += m;
+			}
+		}
+	}
+
 
 	return p_afnd;
 
