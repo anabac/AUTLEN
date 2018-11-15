@@ -2,8 +2,7 @@
 *
 
 # Designorar ficheros con extensiones
-!*.c
-!*.h
+!*.*
 
 # Designorar directorios
 !*/
