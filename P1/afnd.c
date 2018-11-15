@@ -34,16 +34,11 @@ void imprimeLTransiciones(FILE *fd, AFND *p_afnd);
 int indiceDeEstado(AFND *p_afnd, char * nombre){
 	int i, flag = 0;
 
-	for (i = 0, flag = 0; i < p_afnd->num_estados && flag == 0; i++){
+	for (i = 0, flag = 0; i < p_afnd->num_estados && flag == 0; i++)
 		if (!strcmp(nombre, getNombre(p_afnd->estados[i])))
-			flag = 1;
-	}
+			return i;
 
-	if (!flag)
-		return -1;
-
-	// CABANA TE ASESINO
-	return --i;
+	return -1;
 
 }
 
@@ -233,6 +228,7 @@ void AFNDElimina(AFND * p_afnd){
 	}
 	free(p_afnd->transiciones);
 
+	// Eliminación de la matriz de transiciones lambda
 	for (i = 0; i < p_afnd->num_estados; i++)
 		free(p_afnd->lambdas[i]);
 	free(p_afnd->lambdas);
@@ -569,6 +565,7 @@ void AFNDTransita(AFND * p_afnd){
 
 }
 
+// Inserta una transicion lambda
 AFND * AFNDInsertaLTransicion(
        AFND * p_afnd, 
        char * nombre_estado_i, 
@@ -579,44 +576,51 @@ AFND * AFNDInsertaLTransicion(
 	if (!p_afnd || !nombre_estado_i || !nombre_estado_f) 
 		return NULL;
 
-
+	// Obtenemos indice del estado origen en el array de estados
 	i = indiceDeEstado(p_afnd, nombre_estado_i);
 	if (i == -1) return NULL;
-	
+
+	// Obtenemos indice del estado destino en el array de estados
 	j = indiceDeEstado(p_afnd, nombre_estado_f);
 	if (j == -1) return NULL;
 
+	// Marcamos la posicion correspondiente de la matriz de lambdas
 	p_afnd->lambdas[i][j] = 1;
 
 	return p_afnd;
 }
 
-void multiplicarMatrices(short **matriz_dest, short **matriz_src, int n){
+// void multiplicarMatrices(short **matriz_dest, short **matriz_src, int n){
 
-	int i, j;
+// 	int i, j;
 
-	if (!matriz_dest || !matriz_src) return;
+// 	if (!matriz_dest || !matriz_src) return;
 
-	for (i = 0; i < n; i++)
-		for (j = 0; j < n; j++)
-			matriz_dest[i][j] = matriz_dest[i][j] | (matriz_dest[i][j] & matriz_src[j][i]);
+// 	for (i = 0; i < n; i++)
+// 		for (j = 0; j < n; j++)
+// 			matriz_dest[i][j] = matriz_dest[i][j] | (matriz_dest[i][j] & matriz_src[j][i]);
 
-}
+// }
 
 AFND * AFNDCierraLTransicion (AFND * p_afnd){
 	int i, j, k, m;
 
 	if (!p_afnd) return NULL;
 
+	// Para cada estado origen
 	for (i = 0; i < p_afnd->num_estados; i++){
+		// Para cada estaco destino
 		for (j = 0; j < p_afnd->num_estados; j++){
-			if (p_afnd->lambdas[i][j]){
+			// Si el destino es accesible desde el origen por lambdas
+			if (p_afnd->lambdas[i][j] && i != j){
 				m = 0;
 				for (k = 0; k < p_afnd->num_estados; k++){
+					// Cada estado accesible desde el destino
 					if (p_afnd->lambdas[j][k])
+						// ahora es accesible tambien desde el origen
 						p_afnd->lambdas[i][k] = 1;
 					if (k < j)
-						m = j- k;
+						m = j- k-1;
 				}
 				if (m) j += m;
 			}

@@ -135,10 +135,10 @@ int main(int argc, char ** argv)
     AFNDInsertaTransicion(p_afnd_l, "q7", "1", "q7");
 
 
-    AFNDInsertaLTransicion(p_afnd_l, "q0", "q1");
-    AFNDInsertaLTransicion(p_afnd_l, "q0", "q5");
     AFNDInsertaLTransicion(p_afnd_l, "q1", "q2");
-    AFNDInsertaLTransicion(p_afnd_l, "q4", "q2");
+    AFNDInsertaLTransicion(p_afnd_l, "q2", "q3");
+    AFNDInsertaLTransicion(p_afnd_l, "q3", "q0");
+    AFNDInsertaLTransicion(p_afnd_l, "q0", "q4");
 
     
 
