@@ -590,76 +590,77 @@ AFND * AFNDInsertaLTransicion(
 	return p_afnd;
 }
 
-// void multiplicarMatrices(short **matriz_dest, short **matriz_src, int n){
+void cuadradoMatriz(short **matriz_dest, short **matriz_src, int n){
+	int i, j, k;
 
-// 	int i, j;
+	if (!matriz_dest || !matriz_src) return;
 
-// 	if (!matriz_dest || !matriz_src) return;
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+			for (k = 0; k < n; k++)
+				if (matriz_src[i][k] == 1 && matriz_src[k][j] == 1)
+					matriz_dest[i][j] = 1;
 
-// 	for (i = 0; i < n; i++)
-// 		for (j = 0; j < n; j++)
-// 			matriz_dest[i][j] = matriz_dest[i][j] | (matriz_dest[i][j] & matriz_src[j][i]);
+	for (i = 0; i < n; i++){
+		for (j = 0; j < n; j++)
+			printf("%d ", matriz_dest[i][j]);
+		printf("\n");
+	}
+	printf("\n");
+}
 
-// }
+void copiaMatriz(short **dest, short **src, int n){
+	int i, j;
 
-AFND * AFNDCierraLTransicion (AFND * p_afnd){
-	int i, j, k, m;
+	if (!dest || !src) return;
+
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+			dest[i][j] = src[i][j];
+}
+
+AFND * AFNDCierraLTransicion(AFND * p_afnd){
+	int i, j, n;
+	short **matriz;
 
 	if (!p_afnd) return NULL;
 
-	// Para cada estado origen
-	for (i = 0; i < p_afnd->num_estados; i++){
-		// Para cada estaco destino
-		for (j = 0; j < p_afnd->num_estados; j++){
-			// Si el destino es accesible desde el origen por lambdas
-			if (p_afnd->lambdas[i][j] && i != j){
-				m = 0;
-				for (k = 0; k < p_afnd->num_estados; k++){
-					// Cada estado accesible desde el destino
-					if (p_afnd->lambdas[j][k])
-						// ahora es accesible tambien desde el origen
-						p_afnd->lambdas[i][k] = 1;
-					if (k < j)
-						m = j- k-1;
-				}
-				if (m) j += m;
-			}
+	// Reservamos memoria para otra matriz auxiliar
+	matriz = (short **) malloc(sizeof(short *) * p_afnd->num_estados);
+	if (!matriz) return NULL;
+
+	// La inicializamos con los valores de las relaciones lambda
+	for (i = 0; i < p_afnd-> num_estados; i ++){
+		matriz[i] = (short *) malloc(sizeof(short) * p_afnd->num_estados);
+		if (!matriz[i]){
+			for (i--; i >= 0; i--)
+				free(matriz[i]);
+			free(matriz);
+			return NULL;
 		}
+		for (j = 0; j < p_afnd->num_estados; j++)
+			matriz[i][j] = p_afnd->lambdas[i][j];
 	}
 
+	// Elevamos la matriz de lambdas al cuadrado hasta que la potencia sea mayor que el numero de estados
+	// Esto funciona por la propiedad reflexiva
+	// Si no, habria que hacer las potencias de una en una y hacer OR con el resultado anterior
+	// El objetivo es llegar hasta la potencia en la que todos los elementos de la matriz
+	//		sean 0, o todos sean 1, o sea igual que la del paso anterior. En cualquiera de las tres
+	// 		condiciones de parada, no importa si nos pasamos, ya que lo peor que puede pasar es que se quede igual.
+	// Cada vez que aumentamos de potencia tenemos en cuenta un nivel más de lejania.
+	// Como solo hay n estados, no puede haber dos estados con lejania mayor que n, por lo que siempre es suficiente
+	// 		elevar la matriz a n.
+	for (n = 1; n <= p_afnd->num_estados; n*=2){
+		cuadradoMatriz(matriz, p_afnd->lambdas, p_afnd->num_estados);
+		copiaMatriz(p_afnd->lambdas, matriz, p_afnd->num_estados);
+	}
+
+	for (i = 0; i < p_afnd->num_estados; i++)
+		free(matriz[i]);
+	free(matriz);
 
 	return p_afnd;
-
-	// int i, j;
-	// short **matriz;
-
-	// if (!p_afnd) return NULL;
-
-	// matriz = (short **) malloc(sizeof(short *) * p_afnd->num_estados);
-	// if (!matriz) return NULL;
-
-	// for (i = 0; i < p_afnd-> num_estados; i ++){
-	// 	matriz[i] = (short *) malloc(sizeof(short) * p_afnd->num_estados);
-	// 	if (!matriz[i]){
-	// 		for (i--; i >= 0; i--)
-	// 			free(matriz[i]);
-	// 		free(matriz);
-	// 		return NULL;
-	// 	}
-	// 	for (j = 0; j < p_afnd->num_estados; j++)
-	// 		matriz[i][j] = p_afnd->lambdas[i][j];
-	// }
-
-
-
-	// for (i = 0; i < p_afnd->num_estados; i++)
-	// 	multiplicarMatrices(p_afnd->lambdas, matriz, p_afnd->num_estados);
-
-	// for (i = 0; i < p_afnd->num_estados; i++)
-	// 	free(matriz[i]);
-	// free(matriz);
-
-	// return p_afnd;
 }
 
 AFND * AFNDInicializaCadenaActual (AFND * p_afnd ){
