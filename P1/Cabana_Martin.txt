@@ -1,0 +1,18 @@
+	Alejandro Cabana Suárez
+	Blanca Martín Selgas
+	Pareja 07
+	Grupo 1401
+
+	 -- Las transiciones lambda se representan con una matriz cuadrada de dimensión num_estados x num_estados. Donde un 1 en la coordenada (i, j) hace referencia a una posible transición entre el estado con índice i y el estado con índice j en nuestro array de estados. Los valores nulos indican lo contrario.
+	 Como se pide, las transiciones lambda son reflexivas, por lo que la matriz también lo es (la diagonal está llena de unos), y transitivas, propiedad que conseguimos cerrando la matriz.
+
+	 -- Para el cierre de la matriz hemos utilizado la multiplicación de matrices. Una explicación detallada de este proceso se encuentra en el código de la función de cerrar transición:
+	 	// Elevamos la matriz de lambdas al cuadrado hasta que la potencia sea mayor que el número de estados
+		// Esto funciona por la propiedad reflexiva
+		// Si no, habria que hacer las potencias de una en una y hacer OR con el resultado anterior
+		// El objetivo es llegar hasta la potencia en la que todos los elementos de la matriz
+		//		sean 0, o todos sean 1, o sea igual que la del paso anterior. En cualquiera de las tres
+		// 		condiciones de parada, no importa si nos pasamos, ya que lo peor que puede pasar es que se quede igual.
+		// Cada vez que aumentamos de potencia tenemos en cuenta un nivel más de lejanía.
+		// Como solo hay n estados, no puede haber dos estados con lejanía mayor que n, por lo que siempre es suficiente
+		// 		elevar la matriz a n.

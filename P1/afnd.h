@@ -2,7 +2,6 @@
 #define AFND_H 
 
 typedef struct _AFND AFND;
-// typedef struct _Transicion Transicion;
 
 AFND * AFNDNuevo(char * nombre, int num_estados, int num_simbolos);
 void AFNDElimina(AFND * p_afnd);
@@ -27,5 +26,16 @@ AFND * AFNDInsertaLTransicion(
        char * nombre_estado_f );
 AFND * AFNDCierraLTransicion (AFND * p_afnd);
 AFND * AFNDInicializaCadenaActual (AFND * p_afnd );
+
+
+AFND *AFND1ODeSimbolo(char *simbolo);
+AFND *AFND1ODeLambda();
+AFND *AFND1ODeVacio();
+AFND *AFNDAAFND1O(AFND *p_afnd);
+AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2);
+AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2);
+AFND *AFND1OEstrella(AFND *p_afnd_origen);
+void AFNDADot(AFND *p_afnd);
+
 
 #endif 

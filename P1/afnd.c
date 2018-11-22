@@ -689,3 +689,145 @@ void imprimeLTransiciones(FILE *fd, AFND *p_afnd){
 	}
 
 }
+
+AFND *AFND1ODeSimbolo(char *simbolo){
+
+	AFND *afnd1O;
+	char nombre[60] = "afnd1O_";
+
+	if (!simbolo) return NULL;
+
+	afnd1O = AFNDNuevo(strcat(nombre, simbolo), 2, 1);
+	if (!afnd1O) return NULL;
+
+	AFNDInsertaSimbolo(afnd1O, simbolo);
+
+	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
+	AFNDInsertaEstado(afnd1O, "qf", FINAL);
+
+	AFNDInsertaTransicion(afnd1O, "q0", simbolo, "qf");
+
+	return afnd1O;
+}
+
+AFND *AFND1ODeLambda(){
+	
+	AFND *afnd1O;
+
+	afnd1O = AFNDNuevo("afnd1O_lambda", 2, 0);
+	if (!afnd1O) return NULL;
+
+	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
+	AFNDInsertaEstado(afnd1O, "qf", FINAL);
+
+	AFNDInsertaLTransicion(afnd1O, "q0", "qf");
+
+	return afnd1O;
+}
+
+AFND *AFND1ODeVacio(){
+
+	AFND *afnd1O;
+
+	afnd1O = AFNDNuevo("afnd1O_vacio", 2, 0);
+	if (!afnd1O) return NULL;
+
+	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
+	AFNDInsertaEstado(afnd1O, "qf", FINAL);
+
+	return afnd1O;
+}
+
+AFND *AFNDAAFND1O(AFND *p_afnd){
+
+	int num_estados, i, j, k;
+	AFND *afnd1O;
+
+	if (!p_afnd) return NULL;
+
+	num_estados = p_afnd->num_estados;
+	afnd1O = AFNDNuevo(p_afnd->nombre, p_afnd->num_estados+2, p_afnd->num_simbolos);
+	if (!afnd1O) return NULL;
+
+	AFNDInsertaEstado(afnd1O, "nuevo_q0", INICIAL);
+	AFNDInsertaEstado(afnd1O, "nuevo_qf", FINAL);
+
+	for(i = 2; i < num_estados; i++)
+		for(j = 0; j < num_simbolos; j++)
+			for(k = 2; k < num_estados; k++)
+				afnd1O->transiciones[i][j][k] = p_afnd->transiciones[i][j][k];
+	
+	for(i = 2; i < num_estados; i++)
+		for(j = 2; j < num_estados; j++)
+			afnd1O->lambdas[i][j] = p_afnd->lambdas[i][j];
+
+	for(i = 0; i < num_estados; i++){
+		AFNDInsertaEstado(afnd1O, getNombre(p_afnd->estados[i]), NORMAL);
+		if (getTipoEstado(p_afnd->estados[i]) == INICIAL || 
+				getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL)
+			AFNDInsertaLTransicion(afnd1O, "nuevo_q0", getNombre(p_afnd->estados[i]));
+		if (getTipoEstado(p_afnd->estados[i]) == FINAL ||
+			  getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL)
+			AFNDInsertaLTransicion(afnd1O, getNombre(p_afnd->estados[i]), "nuevo_qf");
+	}
+
+	return afnd1O;
+
+}
+
+// SI ALGO PETA MIRAR FINES DE CADENAS
+AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
+
+	int num_estados1, num_estados2, len;
+	int i, j, k;
+	AFND *afnd1O;
+	char *nombre;
+
+	if (!p_afnd1O_1 || !p_afnd1O_2) return NULL;
+
+	num_estados1 = p_afnd1O_1->num_estados;
+	num_estados2 = p_afnd1O_2->num_estados;
+	len = strlen(p_afnd1O_1->nombre) + strlen(p_afnd1O_2->nombre) + 5;
+
+	nombre = (char *) malloc(sizeof(char) * len);
+	if (!nombre) return NULL;
+
+	if (strcpy(nombre, p_afnd1O_1->nombre) < 0){
+		free(nombre);
+		return  NULL;
+	}
+
+	afnd1O = AFNDNuevo(strcat(strcat(nombre, "_"), p_afnd1O_2->nombre), 
+										 p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2, 
+										 p_afnd1O_1->num_simbolos + p_afnd1O_2->num_simbolos);
+	
+	if (!afnd1O){
+		free(nombre);
+		return NULL;
+	}
+
+	AFNDInsertaEstado(afnd1O, strcat(nombre, "_q0"), INICIAL);
+	nombre[strlen(nombre)-1] = 'f';
+	AFNDInsertaEstado(afnd1O, nombre, FINAL);
+
+	for(i = 2; i < num_estados; i++)
+		for(j = 0; j < num_simbolos; j++)
+			for(k = 2; k < num_estados; k++)
+				afnd1O->transiciones[i][j][k] = p_afnd->transiciones[i][j][k];
+	
+	for(i = 2; i < num_estados; i++)
+		for(j = 2; j < num_estados; j++)
+			afnd1O->lambdas[i][j] = p_afnd->lambdas[i][j];
+
+	for(i = 0; i < num_estados; i++){
+		AFNDInsertaEstado(afnd1O, getNombre(p_afnd->estados[i]), NORMAL);
+		if (getTipoEstado(p_afnd->estados[i]) == INICIAL || 
+				getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL)
+			AFNDInsertaLTransicion(afnd1O, "nuevo_q0", getNombre(p_afnd->estados[i]));
+		if (getTipoEstado(p_afnd->estados[i]) == FINAL ||
+			  getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL)
+			AFNDInsertaLTransicion(afnd1O, getNombre(p_afnd->estados[i]), "nuevo_qf");
+	}
+
+	return afnd1O;
+}
