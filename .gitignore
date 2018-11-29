@@ -11,3 +11,6 @@
 
 # Ignorar ficheros objeto
 *.o
+*.d
+vgcore*
+*.swp
