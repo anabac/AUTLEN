@@ -51,7 +51,7 @@ void AlfabetoImprime(FILE *f, Alfabeto *alf){
 
 	if (!f || !alf) return;
 
-	fprintf(f, "\n\tnum_simbolos = %d\n\n", alf->num_simbolos);
+	fprintf(f, "\n\tnum_simbolos = %d\n\n", alf->num_simbolos_insertados);
 	
 	fprintf(f, "\tA={ ");
 	// Imprimimos todos los simbolos del alfabeto
@@ -83,5 +83,17 @@ if (!alf) return NULL;
 
 int AlfabetoGetNumSimbolos(Alfabeto *alf){
 	if (!alf) return 0;
-	return alf->num_simbolos;
+	return alf->num_simbolos_insertados;
+}
+
+int getIndiceSimbolo(Alfabeto *alf, char *simbolo){
+	int i;
+
+	if (!alf || !simbolo) return -1;
+
+	for (i = 0; i < alf->num_simbolos_insertados; i++)
+		if (!strcmp(alf->simbolos[i], simbolo))
+			return i;
+
+	return -1;
 }
