@@ -51,6 +51,16 @@ int main(int argc, char ** argv)
 /* SE CREA UN AUTÓMATA FINITO PARA LA EXPRESIÓN "1" * */
         p_afnd_l6 = AFND1OEstrella(p_afnd_l1);
 
+
+/********************************************************/
+        AFNDADot(p_afnd_l0);
+        AFNDADot(p_afnd_l1);
+        AFNDADot(p_afnd_l2);
+        AFNDADot(p_afnd_l3);
+        AFNDADot(p_afnd_l4);
+        AFNDADot(p_afnd_l5);
+        AFNDADot(p_afnd_l6);
+
 /* SE CALCULA EL CIERRE REFLEXIVO-TRANSITIVO DE TODOS LOS AUTÓMATAS */
       p_afnd_l0 = AFNDCierraLTransicion(p_afnd_l0);
       p_afnd_l1 = AFNDCierraLTransicion(p_afnd_l1);

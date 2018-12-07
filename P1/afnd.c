@@ -32,8 +32,8 @@ int recursividad_maxima(AFND *p_afnd, Estado **sin_procesar, Estado **procesados
 void imprimeLTransiciones(FILE *fd, AFND *p_afnd);
 void insertaSimbolosAlfabeto(AFND *p_afnd, char **simbolos, int num_simbolos);
 void copiaTransiciones(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2);
-void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2, 
-									int flag_union, int flag_concatena);
+void copiaEstados_actualizaLambdas(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2, 
+									int flag_union, int flag_concatena, int flag_estrella);
 
 
 int indiceDeEstado(AFND *p_afnd, char * nombre){
@@ -757,56 +757,67 @@ void copiaTransicionesYLambda(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd
 	return;
 }
 
-void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2, 
-									int flag_union, int flag_concatena){
+void copiaEstados_actualizaLambdas(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2, 
+									int flag_union, int flag_concatena, int flag_estrella){
 	
-	char nombre[256];
+	char nombre[256] = "";
 	int i;
 	int final1;
 
 	if (!p_afnd_dest || !p_afnd_src) return;
 
-	if (strcpy(nombre, p_afnd_dest->nombre) < 0) return;
+	// if (strcpy(nombre, p_afnd_dest->nombre) < 0) return;
 
 	for(i = 0; i < p_afnd_src->num_estados; i++){
-		nombre[strlen(p_afnd_dest->nombre)] = '\0';
-		AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_1"), NORMAL);
+		nombre[/*strlen(p_afnd_dest->nombre)*/0] = '\0';
+		// AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_1"), NORMAL);
 		
 		if (getTipoEstado(p_afnd_src->estados[i]) == INICIAL || 
 				getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[0][i+2] = 1;
 		
 		if (flag_union){
+			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_U1"), NORMAL);
 			if (getTipoEstado(p_afnd_src->estados[i]) == FINAL ||
 				  getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
 					p_afnd_dest->lambdas[i+2][1] = 1;
 		}
 
 		else if (flag_concatena){
+			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_K1"), NORMAL);
 			if (getTipoEstado(p_afnd_src->estados[i]) == FINAL ||
 				  getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
 					final1 = i;
 		}
+
+		else if (flag_estrella){
+			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_x"), NORMAL);
+			if (getTipoEstado(p_afnd_src->estados[i]) == FINAL ||
+			      getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
+				p_afnd_dest->lambdas[i+2][1] = 1;
+		}
 	}
 
-	if (!p_afnd_src2) return;
+	if (!p_afnd_src2 || flag_estrella) return;
 
 
 	for(i = 0 ; i < p_afnd_src2->num_estados; i++){
-		nombre[strlen(p_afnd_dest->nombre)] = '\0';
-		AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_2"), NORMAL);
+		nombre[/*strlen(p_afnd_dest->nombre)*/0] = '\0';
+		// AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_2"), NORMAL);
 		
 		if (getTipoEstado(p_afnd_src2->estados[i]) == FINAL ||
 			  getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[i+2+p_afnd_src->num_estados][1] = 1;
 		
 		if (flag_union){
+			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_U2"), NORMAL);
 			if (getTipoEstado(p_afnd_src2->estados[i]) == INICIAL || 
 					getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
 					p_afnd_dest->lambdas[0][i+2+p_afnd_src->num_estados] = 1;
 		}
 
 		if (flag_concatena){
+			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_K2"), NORMAL);
 			if (getTipoEstado(p_afnd_src2->estados[i]) == INICIAL ||
 			    getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[final1+2][i+2+p_afnd_src->num_estados] = 1;	
@@ -821,7 +832,8 @@ void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2,
 AFND *AFND1ODeSimbolo(char *simbolo){
 
 	AFND *afnd1O;
-	char nombre[60] = "afnd1O_";
+	// char nombre[60] = "afnd1O_";
+	char nombre[60] = "";
 
 	if (!simbolo) return NULL;
 
@@ -887,7 +899,7 @@ AFND *AFNDAAFND1O(AFND *p_afnd){
 
 	copiaTransicionesYLambda(afnd1O, p_afnd, NULL);
 
-	copiaEstados(afnd1O, p_afnd, NULL, 1, 0);
+	copiaEstados_actualizaLambdas(afnd1O, p_afnd, NULL, 1, 0, 0);
 
 	return afnd1O;
 
@@ -912,16 +924,17 @@ AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
 	num_estados = p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2;
 	num_simbolos = num_simbolos1 + num_simbolos2;
 
-	len = strlen(p_afnd1O_1->nombre) + strlen(p_afnd1O_2->nombre) + 5;
+	len = strlen(p_afnd1O_1->nombre) + strlen(p_afnd1O_2->nombre) + 9;
 	nombre = (char *) malloc(sizeof(char) * len);
 	if (!nombre) return NULL;
 
-	if (strcpy(nombre, p_afnd1O_1->nombre) < 0){
+	sprintf(nombre, "(");
+	if (strcat(nombre, p_afnd1O_1->nombre) < 0){
 		free(nombre);
 		return  NULL;
 	}
 
-	afnd1O = AFNDNuevo(strcat(strcat(nombre, "_"), p_afnd1O_2->nombre), 
+	afnd1O = AFNDNuevo(strcat(strcat(strcat(nombre, "_U_"), p_afnd1O_2->nombre), ")"), 
 										 num_estados, 
 										 num_simbolos);
 	
@@ -930,16 +943,18 @@ AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
 		return NULL;
 	}
 
-	AFNDInsertaEstado(afnd1O, strcat(nombre, "_q0"), INICIAL);
-	nombre[strlen(nombre)-1] = 'f';
-	AFNDInsertaEstado(afnd1O, nombre, FINAL);
+	AFNDInsertaEstado(afnd1O, /*strcat(nombre, "_q0")*/ "q0", INICIAL);
+	// nombre[strlen(nombre)-1] = 'f';
+	AFNDInsertaEstado(afnd1O, /*nombre*/ "qf", FINAL);
 
 	insertaSimbolosAlfabeto(afnd1O, simbolos1, num_simbolos1);
 	insertaSimbolosAlfabeto(afnd1O, simbolos2, num_simbolos2);
 
 	copiaTransicionesYLambda(afnd1O, p_afnd1O_1, p_afnd1O_2);
 
-	copiaEstados(afnd1O, p_afnd1O_1, p_afnd1O_2, 1, 0);
+	copiaEstados_actualizaLambdas(afnd1O, p_afnd1O_1, p_afnd1O_2, 1, 0, 0);
+
+	free(nombre);
 
 	return afnd1O;
 }
@@ -963,16 +978,17 @@ AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
 	num_simbolos = num_simbolos1 + num_simbolos2;
 	num_estados = p_afnd_origen1->num_estados + p_afnd_origen2->num_estados + 2;
 
-	len = strlen(p_afnd_origen1->nombre) + strlen(p_afnd_origen2->nombre) + 5;
+	len = strlen(p_afnd_origen1->nombre) + strlen(p_afnd_origen2->nombre) + 9;
 	nombre = (char *) malloc(sizeof(char) * len);
 	if (!nombre) return NULL;
 
-	if (strcpy(nombre, p_afnd_origen1->nombre) < 0){
+	sprintf(nombre, "(");
+	if (strcat(nombre, p_afnd_origen1->nombre) < 0){
 		free(nombre);
 		return  NULL;
 	}
 
-	afnd1O = AFNDNuevo(strcat(strcat(nombre, "_"), p_afnd_origen2->nombre), 
+	afnd1O = AFNDNuevo(strcat(strcat(strcat(nombre, "_K_"), p_afnd_origen2->nombre), ")"), 
 										 num_estados, 
 										 num_simbolos);
 	
@@ -981,16 +997,18 @@ AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
 		return NULL;
 	}
 
-	AFNDInsertaEstado(afnd1O, strcat(nombre, "_q0"), INICIAL);
-	nombre[strlen(nombre)-1] = 'f';
-	AFNDInsertaEstado(afnd1O, nombre, FINAL);
+	AFNDInsertaEstado(afnd1O, /*strcat(nombre, "_q0")*/ "q0", INICIAL);
+	// nombre[strlen(nombre)-1] = 'f';
+	AFNDInsertaEstado(afnd1O, /*nombre*/ "qf", FINAL);
 
 	insertaSimbolosAlfabeto(afnd1O, simbolos1, num_simbolos1);
 	insertaSimbolosAlfabeto(afnd1O, simbolos2, num_simbolos2);
 
 	copiaTransicionesYLambda(afnd1O, p_afnd_origen1, p_afnd_origen2);
 
-	copiaEstados(afnd1O, p_afnd_origen1, p_afnd_origen2, 0, 1);
+	copiaEstados_actualizaLambdas(afnd1O, p_afnd_origen1, p_afnd_origen2, 0, 1, 0);
+
+	free(nombre);
 
 	return afnd1O;
 }
@@ -1015,25 +1033,27 @@ AFND *AFND1OEstrella(AFND *p_afnd_origen){
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd_origen->alfabeto);
 	simbolos = AlfabetoGetSimbolos(p_afnd_origen->alfabeto);
 	
-	afnd1O = AFNDNuevo(strcat(nombre, "_estrella"), p_afnd_origen->num_estados+2, num_simbolos);
+	afnd1O = AFNDNuevo(strcat(nombre, "_x"), p_afnd_origen->num_estados+2, num_simbolos);
 	if (!afnd1O){
 		free(nombre);
 		return NULL;
 	}
 
 	nombre[strlen(p_afnd_origen->nombre)] = '\0';
-	AFNDInsertaEstado(afnd1O, strcat(nombre, "nuevo_q0"), INICIAL);
-	nombre[strlen(nombre)-1] = 'f';
-	AFNDInsertaEstado(afnd1O, nombre, FINAL);
+	AFNDInsertaEstado(afnd1O, /*strcat(nombre, "_q0")*/ "q0", INICIAL);
+	// nombre[strlen(nombre)-1] = 'f';
+	AFNDInsertaEstado(afnd1O, /*nombre*/ "qf", FINAL);
 
 	insertaSimbolosAlfabeto(afnd1O, simbolos, num_simbolos);
 
 	copiaTransicionesYLambda(afnd1O, p_afnd_origen, NULL);
 
-	copiaEstados(afnd1O, p_afnd_origen, NULL, 1, 0);
+	copiaEstados_actualizaLambdas(afnd1O, p_afnd_origen, NULL, 0, 0, 1);
 
 	afnd1O->lambdas[0][1] = 1;
 	afnd1O->lambdas[1][0] = 1;
+
+	free(nombre);
 
 	return afnd1O;
 }
@@ -1064,11 +1084,11 @@ void AFNDADot(AFND *p_afnd){
 		return;
 	}
 
-	fprintf(f, "digraph %s { rankdir=BT;\n", p_afnd->nombre);
+	fprintf(f, "digraph \"%s\" { rankdir=BT;\n", p_afnd->nombre);
 	fprintf(f, "\t _invisible [style=\"invis\"];\n");
 
 	for (i = 0; i < p_afnd->num_estados; i++){
-		fprintf(f, "\t %s ", getNombre(p_afnd->estados[i]));	
+		fprintf(f, "\t \"%s\" ", getNombre(p_afnd->estados[i]));	
 		if (getTipoEstado(p_afnd->estados[i]) == FINAL || 
 				getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL)
 			fprintf(f, "[penwidth=\"2\"]");
@@ -1078,7 +1098,7 @@ void AFNDADot(AFND *p_afnd){
 	for (i = 0; i < p_afnd->num_estados; i++){
 		if (getTipoEstado(p_afnd->estados[i]) == INICIAL || 
 				getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL){
-			fprintf(f, "_invisible -> %s\n", getNombre(p_afnd->estados[i]));
+			fprintf(f, "_invisible -> \"%s\"\n", getNombre(p_afnd->estados[i]));
 		}
 	}	
 
@@ -1086,7 +1106,7 @@ void AFNDADot(AFND *p_afnd){
 		for (j = 0; j < AlfabetoGetNumSimbolos(p_afnd->alfabeto); j++)
 			for (k = 0; k < p_afnd->num_estados; k++)
 					if (p_afnd->transiciones[i][j][k] == 1)
-						fprintf(f, "%s -> %s [label=\"%s\"];\n", 
+						fprintf(f, "\"%s\" -> \"%s\" [label=\"%s\"];\n", 
 							getNombre(p_afnd->estados[i]),
 						  getNombre(p_afnd->estados[k]),
 						  AlfabetoGetSimbolos(p_afnd->alfabeto)[j]);
@@ -1094,8 +1114,8 @@ void AFNDADot(AFND *p_afnd){
 
 	for (i = 0; i < p_afnd->num_estados; i++)
 			for (j = 0; j < p_afnd->num_estados; j++)
-					if (p_afnd->lambdas[i][j])
-						fprintf(f, "%s -> %s [label=\"&lambda;\"];\n", 
+					if (p_afnd->lambdas[i][j] && i != j)
+						fprintf(f, "\"%s\" -> \"%s\" [label=\"&lambda;\"];\n", 
 							getNombre(p_afnd->estados[i]),
 						  getNombre(p_afnd->estados[j]));
 	
