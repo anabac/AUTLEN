@@ -40,10 +40,13 @@ int main(int argc, char ** argv)
         p_afnd_l0 = AFND1ODeSimbolo("0");
 /* SE CREA UN AUTÓMATA FINITO PARA LA EXPRESION REGULAR “1”.”1” */
         p_afnd_l2 = AFND1OConcatena(p_afnd_l1, p_afnd_l1);
+        AFNDADot(p_afnd_l2);
+
 /* SE CREA UN AUTÓMATA FINITO PARA LA EXPRESION REGULAR “0”+“1” */
         p_afnd_l4 = AFND1OUne(p_afnd_l0, p_afnd_l1);
 /* SE CREA UN AUTÓMATA FINITO PARA LA EXPRESIÓN ( “0”+”1” ) *  */
         p_afnd_l5 = AFND1OEstrella(p_afnd_l4);
+        AFNDADot(p_afnd_l5);
 /* SE CREA UN AUTÓMATA FINITO PARA LA EXPRESIÓN “1”.”1”.( “0”+”1” )*   */
         p_afnd_l3 = AFND1OConcatena(p_afnd_l2, p_afnd_l5);
 
@@ -63,14 +66,6 @@ int main(int argc, char ** argv)
 /********************************************************/
         fprintf(stdout,"EJEMPLO DE AUTÓMATA DE UNA EXPRESIÓN CORRESPONDIENTE A UN SÍMBOLO: \"1\"\n");
         AFNDImprime(stdout,p_afnd_l1);
-        AFNDADot(p_afnd_l1);
-        AFNDADot(p_afnd_l2);
-        AFNDADot(p_afnd_l3);
-        AFNDADot(p_afnd_l4);
-        AFNDADot(p_afnd_l5);
-        AFNDADot(p_afnd_l6);
-
-
 
         fprintf(stdout,"EJEMPLO DE AUTÓMATA DE UNA EXPRESIÓN CORRESPONDIENTE A LA CONCATENACIÓN DE OTROS DOS, JUSTAMENTE CONCATENA EL ANTERIOR CONSIGO MISMO\n");
         AFNDImprime(stdout,p_afnd_l2);
