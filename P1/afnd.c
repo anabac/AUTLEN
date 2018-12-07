@@ -794,9 +794,7 @@ void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2,
 
 	for(i = 0 ; i < p_afnd_src2->num_estados; i++){
 		nombre[strlen(p_afnd_dest->nombre)] = '\0';
-		// printf("%d  %d\n", i, p_afnd_dest->num_estados);
 		AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_2"), NORMAL);
-		printf("%d  %d\n", i, p_afnd_dest->num_estados);
 		
 		if (getTipoEstado(p_afnd_src2->estados[i]) == FINAL ||
 			  getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
@@ -809,15 +807,12 @@ void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2,
 		}
 
 		if (flag_concatena){
-			printf("%d %d\n", final1+2, i+2+p_afnd_src->num_estados);
 			if (getTipoEstado(p_afnd_src2->estados[i]) == INICIAL ||
 			    getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[final1+2][i+2+p_afnd_src->num_estados] = 1;	
 		}
 				
 	}
-
-	// printf("-------------------------\n");
 
 	return;
 }
