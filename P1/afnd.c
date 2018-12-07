@@ -760,7 +760,7 @@ void copiaTransicionesYLambda(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd
 void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2, 
 									int flag_union, int flag_concatena){
 	
-	char nombre[64];
+	char nombre[256];
 	int i;
 	int final1;
 
@@ -794,7 +794,7 @@ void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2,
 
 	for(i = 0 ; i < p_afnd_src2->num_estados; i++){
 		nombre[strlen(p_afnd_dest->nombre)] = '\0';
-		printf("%d  %d\n", i, p_afnd_dest->num_estados);
+		// printf("%d  %d\n", i, p_afnd_dest->num_estados);
 		AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_2"), NORMAL);
 		printf("%d  %d\n", i, p_afnd_dest->num_estados);
 		
@@ -817,7 +817,7 @@ void copiaEstados(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2,
 				
 	}
 
-	printf("-------------------------\n");
+	// printf("-------------------------\n");
 
 	return;
 }
@@ -873,16 +873,15 @@ AFND *AFND1ODeVacio(){
 
 AFND *AFNDAAFND1O(AFND *p_afnd){
 
-	int num_estados, i, j, k;
 	int num_simbolos;
 	char **simbolos;
 	AFND *afnd1O;
 
 	if (!p_afnd) return NULL;
 
-	num_estados = p_afnd->num_estados;
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd->alfabeto);
 	simbolos = AlfabetoGetSimbolos(p_afnd->alfabeto);
+
 	afnd1O = AFNDNuevo(p_afnd->nombre, p_afnd->num_estados+2, num_simbolos);
 	if (!afnd1O) return NULL;
 
@@ -900,67 +899,32 @@ AFND *AFNDAAFND1O(AFND *p_afnd){
 }
 
 AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
-
-	int num_estados1, num_estados2, len;
+	int len;
 	int num_simbolos1, num_simbolos2;
 	int num_estados, num_simbolos;
-	int i, j, k, indice;
 	AFND *afnd1O;
-	char *nombre, *nombre1, *nombre2;
+	char *nombre;
 	char **simbolos1, **simbolos2;
 
 	if (!p_afnd1O_1 || !p_afnd1O_2) return NULL;
 
-	num_estados1 = p_afnd1O_1->num_estados;
-	num_estados2 = p_afnd1O_2->num_estados;
-	len = strlen(p_afnd1O_1->nombre) + strlen(p_afnd1O_2->nombre) + 5;
-
-	nombre = (char *) malloc(sizeof(char) * len);
-	num_estados = p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2;
 	num_simbolos1 = AlfabetoGetNumSimbolos(p_afnd1O_1->alfabeto);
-	num_simbolos2 = AlfabetoGetNumSimbolos(p_afnd1O_2->alfabeto);
 	simbolos1 = AlfabetoGetSimbolos(p_afnd1O_1->alfabeto);
+
+	num_simbolos2 = AlfabetoGetNumSimbolos(p_afnd1O_2->alfabeto);
 	simbolos2 = AlfabetoGetSimbolos(p_afnd1O_2->alfabeto);
+	
+	num_estados = p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2;
 	num_simbolos = num_simbolos1 + num_simbolos2;
 
+	len = strlen(p_afnd1O_1->nombre) + strlen(p_afnd1O_2->nombre) + 5;
+	nombre = (char *) malloc(sizeof(char) * len);
 	if (!nombre) return NULL;
-
-	nombre2 = (char *) malloc(sizeof(char) * (len + 2));
-	if (!nombre2){
-		free(nombre);
-	 	return NULL;
-	}
-
-	nombre1 = (char *) malloc(sizeof(char) * (len + 2));
-	if (!nombre1){
-		free(nombre);
-		free(nombre2);
-	 	return NULL;
-	}
 
 	if (strcpy(nombre, p_afnd1O_1->nombre) < 0){
 		free(nombre);
-		free(nombre2);
-		free(nombre1);
 		return  NULL;
 	}
-
-	if (strcpy(nombre1, p_afnd1O_1->nombre) < 0){
-		free(nombre);
-		free(nombre2);
-		free(nombre1);
-		return NULL;
-	}
-
-	if (strcpy(nombre2, p_afnd1O_2->nombre) < 0){
-		free(nombre);
-		free(nombre2);
-		free(nombre1);
-		return NULL;
-	}
-
-	nombre1 = strcat(nombre1, "_");
-	nombre2 = strcat(nombre2, "_");
 
 	afnd1O = AFNDNuevo(strcat(strcat(nombre, "_"), p_afnd1O_2->nombre), 
 										 num_estados, 
@@ -968,8 +932,6 @@ AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
 	
 	if (!afnd1O){
 		free(nombre);
-		free(nombre1);
-		free(nombre2);
 		return NULL;
 	}
 
@@ -988,67 +950,32 @@ AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
 }
 
 AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
-	int num_estados1, num_estados2, len;
+	int len;
 	int num_simbolos1, num_simbolos2;
 	int num_estados, num_simbolos;
 	char **simbolos1, **simbolos2;
-	int i, j, k, indice;
 	AFND *afnd1O;
-	char *nombre, *nombre1, *nombre2;
-	char *antiguo_final;
+	char *nombre;
 	
 	if (!p_afnd_origen1 || !p_afnd_origen2) return NULL;
 
-	num_estados1 = p_afnd_origen1->num_estados;
-	num_estados2 = p_afnd_origen2->num_estados;
-	len = strlen(p_afnd_origen1->nombre) + strlen(p_afnd_origen2->nombre) + 5;
-	
-	num_estados = p_afnd_origen1->num_estados + p_afnd_origen2->num_estados + 2;
 	num_simbolos1 = AlfabetoGetNumSimbolos(p_afnd_origen1->alfabeto);
-	num_simbolos2 = AlfabetoGetNumSimbolos(p_afnd_origen2->alfabeto);
 	simbolos1 = AlfabetoGetSimbolos(p_afnd_origen1->alfabeto);
+	
+	num_simbolos2 = AlfabetoGetNumSimbolos(p_afnd_origen2->alfabeto);
 	simbolos2 = AlfabetoGetSimbolos(p_afnd_origen2->alfabeto);
+	
 	num_simbolos = num_simbolos1 + num_simbolos2;
+	num_estados = p_afnd_origen1->num_estados + p_afnd_origen2->num_estados + 2;
 
+	len = strlen(p_afnd_origen1->nombre) + strlen(p_afnd_origen2->nombre) + 5;
 	nombre = (char *) malloc(sizeof(char) * len);
 	if (!nombre) return NULL;
 
-	nombre2 = (char *) malloc(sizeof(char) * (len + 10));
-	if (!nombre2){
-		free(nombre);
-	 	return NULL;
-	}
-
-	nombre1 = (char *) malloc(sizeof(char) * (len + 10));
-	if (!nombre1){
-		free(nombre);
-		free(nombre2);
-	 	return NULL;
-	}
-
 	if (strcpy(nombre, p_afnd_origen1->nombre) < 0){
 		free(nombre);
-		free(nombre2);
-		free(nombre1);
 		return  NULL;
 	}
-
-	if (strcpy(nombre1, p_afnd_origen1->nombre) < 0){
-		free(nombre);
-		free(nombre2);
-		free(nombre1);
-		return NULL;
-	}
-
-	if (strcpy(nombre2, p_afnd_origen2->nombre) < 0){
-		free(nombre);
-		free(nombre2);
-		free(nombre1);
-		return NULL;
-	}
-
-	nombre1 = strcat(nombre1, "_");
-	nombre2 = strcat(nombre2, "_");
 
 	afnd1O = AFNDNuevo(strcat(strcat(nombre, "_"), p_afnd_origen2->nombre), 
 										 num_estados, 
@@ -1056,8 +983,6 @@ AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
 	
 	if (!afnd1O){
 		free(nombre);
-		free(nombre1);
-		free(nombre2);
 		return NULL;
 	}
 
@@ -1076,10 +1001,9 @@ AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
 }
 
 AFND *AFND1OEstrella(AFND *p_afnd_origen){
-	int num_estados, i, j, k;
 	int num_simbolos;
 	AFND *afnd1O;
-	char *nombre, *nombre2;
+	char *nombre;
 	char **simbolos;
 
 	if (!p_afnd_origen) return NULL;
@@ -1088,31 +1012,15 @@ AFND *AFND1OEstrella(AFND *p_afnd_origen){
 	if (!nombre) 
 		return NULL;
 
-	nombre2 = (char *) malloc(sizeof(char) * (strlen(p_afnd_origen->nombre) + 10));
-	if (!nombre2){
-		free(nombre);
-		return NULL;
-	}
-
 	if (strcpy(nombre, p_afnd_origen->nombre) < 0){
 		free(nombre);
-		free(nombre2);
 		return NULL;
 	}
 
-	if (strcpy(nombre2, p_afnd_origen->nombre) < 0){
-		free(nombre);
-		free(nombre2);
-		return NULL;
-	}
-
-	strcat(nombre2, "nuevo_q0");
-
-	num_estados = p_afnd_origen->num_estados;
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd_origen->alfabeto);
 	simbolos = AlfabetoGetSimbolos(p_afnd_origen->alfabeto);
-	afnd1O = AFNDNuevo(strcat(nombre, "_estrella"), p_afnd_origen->num_estados+2, num_simbolos);
 	
+	afnd1O = AFNDNuevo(strcat(nombre, "_estrella"), p_afnd_origen->num_estados+2, num_simbolos);
 	if (!afnd1O){
 		free(nombre);
 		return NULL;
