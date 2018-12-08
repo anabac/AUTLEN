@@ -29,13 +29,25 @@ struct _AFND {
 };
 
 int recursividad_maxima(AFND *p_afnd, Estado **sin_procesar, Estado **procesados, int num_procesados, int num_sin_procesar, int proc);
+
+// Funcion auxiliar que imprime las transiciones lambda de un automata
 void imprimeLTransiciones(FILE *fd, AFND *p_afnd);
+
+// Funcion auxiliar que inserta un conjunto de simbolos en el alfabeto de un automata
 void insertaSimbolosAlfabeto(AFND *p_afnd, char **simbolos, int num_simbolos);
-void copiaTransiciones(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2);
+
+// Funcion auxiliar que copia las transiciones y las transiciones lambda de 
+// uno o dos afnd a otro
+void copiaTransicionesYLambda(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2);
+
+// Funcion auxiliar que copia los estados de uno o dos afnd a otro, insertando las
+// transiciones lambda indicadas por los flags
 void copiaEstados_actualizaLambdas(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd_src2, 
 									int flag_union, int flag_concatena, int flag_estrella);
 
 
+// Funcion auxiliar que indice el indice que ocupa un estado dentro
+// del conjunto de estados del automata
 int indiceDeEstado(AFND *p_afnd, char * nombre){
 	int i, flag = 0;
 
@@ -709,6 +721,7 @@ void insertaSimbolosAlfabeto(AFND *p_afnd, char **simbolos, int num_simbolos){
 
 	if (!p_afnd || !simbolos) return;
 
+	// Por cada simbolo en el array, insertamos este en el alfabeto del automata
 	for (i = 0; i < num_simbolos; i++)
 		AlfabetoInsertaSimbolo(p_afnd->alfabeto, simbolos[i]);
 
@@ -723,33 +736,52 @@ void copiaTransicionesYLambda(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p_afnd
 
 	if (!p_afnd_dest || !p_afnd_src) return;
 
+	// Numero de simbolos del alfabeto del primer automata fuente
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd_src->alfabeto);
 
+	// Copiamos las transiciones del primer automata fuente al destino
+	// teniendo en cuenta que las dos primeras filas y columnas hacen
+	// referencia a nuevos estados que han sido insertados y por
+	// lo tanto se saltan dichas posiciones
 	for(i = 0; i < p_afnd_src->num_estados; i++)
 		for(j = 0; j < num_simbolos; j++)
 			for(k = 0; k < p_afnd_src->num_estados; k++)
 				p_afnd_dest->transiciones[i+2][j][k+2] = p_afnd_src->transiciones[i][j][k];
 	
+	// Copiamos las transiciones lambda del primer automata, 
+	// volviendo a tener en cuenta que no debemos sobrescribir
+	// las dos primeras filas/columnas del automata destino
 	for(i = 0; i < p_afnd_src->num_estados; i++)
 		for(j = 0; j < p_afnd_src->num_estados; j++)
 			p_afnd_dest->lambdas[i+2][j+2] = p_afnd_src->lambdas[i][j];
 
+	// Si se ha suministrado otro automata que copiar
 	if (!p_afnd_src2) return;
 
+	// Numero de estados del primer automata fuente
 	num_estados1 = p_afnd_src->num_estados;
+	// Numero de simbolos del segundo automata fuente
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd_src2->alfabeto);
+	// Simbolos dentro del alfabeto del segundo automata fuente
 	simbolos = AlfabetoGetSimbolos(p_afnd_src2->alfabeto);
 
+	// Copiamos las transiciones del segundo automata
 	for (i = 0; i < p_afnd_src2->num_estados; i++){
 		for (j = 0; j < num_simbolos; j++){
 			for (k = 0; k < p_afnd_src2->num_estados; k++){
+				// Puesto que puede que el primer automata y el segundo compartan 
+				// algun simbolo, obtenemos el indice del simbolo 
 				indice = getIndiceSimbolo(p_afnd_dest->alfabeto, simbolos[j]);
+				// Copiamos la transicion, sabiendo que debemos copiarla en las posiciones
+				// a partir de 2+num_estados1
 				p_afnd_dest->transiciones[i+2+num_estados1][indice][k+2+num_estados1] = 
 						p_afnd_src2->transiciones[i][j][k];
 			}
 		}
 	}
 
+	// Copiamos las transiciones lambda del segundo automata
+	// siguiendo la misma logica
 	for(i = 0; i < p_afnd_src2->num_estados; i++)
 		for(j = 0; j < p_afnd_src2->num_estados; j++)
 			p_afnd_dest->lambdas[i+2+num_estados1][j+2+num_estados1] = p_afnd_src2->lambdas[i][j];
@@ -766,58 +798,86 @@ void copiaEstados_actualizaLambdas(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p
 
 	if (!p_afnd_dest || !p_afnd_src) return;
 
-	// if (strcpy(nombre, p_afnd_dest->nombre) < 0) return;
-
+	// Recorremos los estados del primer automata fuente
 	for(i = 0; i < p_afnd_src->num_estados; i++){
-		nombre[/*strlen(p_afnd_dest->nombre)*/0] = '\0';
-		// AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_1"), NORMAL);
+		nombre[0] = '\0';
 		
+		// Si el estado es del tipo INICIAL o INICIAL_Y_FINAL, 
+		// debemos insertar una una transicion lambda
+		// desde el nuevo estado inicial a este
 		if (getTipoEstado(p_afnd_src->estados[i]) == INICIAL || 
 				getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[0][i+2] = 1;
 		
+		// Si el afnd destino se trata de una union de afnds
 		if (flag_union){
+			// Insertamos el estado como NORMAL aniadiendo a su nombre el sufijo _U1
 			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_U1"), NORMAL);
+			// Si se trata de un estado FINAL o INICIAL_Y_FINAL, 
+			// se inserta una transicion lambda del estado al
+			// nuevo estado final
 			if (getTipoEstado(p_afnd_src->estados[i]) == FINAL ||
 				  getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
 					p_afnd_dest->lambdas[i+2][1] = 1;
 		}
 
+		// Si el afnd destino se trata de una concatenacion de afnds
 		else if (flag_concatena){
+			// Insertamos el estado como NORMAL aniadiendo a su nombre el sufijo _K1
 			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_K1"), NORMAL);
+			// Si se trata de un estado FINAL o INICIAL_Y_FINAL, 
+			// guardamos el indice del estado para poder 
+			// aniadir la lambda de este al estado inicial del afnd fuente
 			if (getTipoEstado(p_afnd_src->estados[i]) == FINAL ||
 				  getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
 					final1 = i;
 		}
 
+		// Si el afnd destino se trata del cierre de un afnd
 		else if (flag_estrella){
+			// Insertamos el estado como NORMAL aniadiendo a su nombre el sufujo _x
 			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src->estados[i])), "_x"), NORMAL);
+			// Si el tipo del estado es FINAL o INICIAL_Y_FINAL, 
+			// insertamos una lambda del estado al nuevo estado final
 			if (getTipoEstado(p_afnd_src->estados[i]) == FINAL ||
 			      getTipoEstado(p_afnd_src->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[i+2][1] = 1;
 		}
 	}
 
+	// Si no se ha proporcionado otro afnd o el flag indicaba
+	// cierre de un afnd, se termina.
 	if (!p_afnd_src2 || flag_estrella) return;
 
 
+	// Recorremos los estados del segundo afnd fuente
 	for(i = 0 ; i < p_afnd_src2->num_estados; i++){
-		nombre[/*strlen(p_afnd_dest->nombre)*/0] = '\0';
-		// AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_2"), NORMAL);
-		
+		nombre[0] = '\0';
+
+		// Si el estado es FINAL o INICIAL_Y_FINAL, se aniade una lambda
+		// de este al nuevo estado final
 		if (getTipoEstado(p_afnd_src2->estados[i]) == FINAL ||
 			  getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[i+2+p_afnd_src->num_estados][1] = 1;
 		
+		// Si el afnd destino se trata de una union de afnds
 		if (flag_union){
+			// Insertamos el estado como NORMAL aniadiendo a su nombre el sufijo _U2
 			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_U2"), NORMAL);
+			// Si se trata de un estado INICIAL o INICIAL_Y_FINAL, 
+			// se inserta una transicion lambda del nuevo estado inicial a este
 			if (getTipoEstado(p_afnd_src2->estados[i]) == INICIAL || 
 					getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
 					p_afnd_dest->lambdas[0][i+2+p_afnd_src->num_estados] = 1;
 		}
 
+		// Si el afnd destino se trata de la concatenacion de afnds
 		if (flag_concatena){
+			// Insertamos el estado como NORMAL aniadiendo a su nombre el sufijo _K2
 			AFNDInsertaEstado(p_afnd_dest, strcat(strcat(nombre, getNombre(p_afnd_src2->estados[i])), "_K2"), NORMAL);
+			// Si se trata de un estado INICIAL o INICIAL_Y_FINAL, 
+			// se inserta una transicion lambda del antiguo
+			// estado final del primer afnd a este
 			if (getTipoEstado(p_afnd_src2->estados[i]) == INICIAL ||
 			    getTipoEstado(p_afnd_src2->estados[i]) == INICIAL_Y_FINAL)
 				p_afnd_dest->lambdas[final1+2][i+2+p_afnd_src->num_estados] = 1;	
@@ -832,19 +892,23 @@ void copiaEstados_actualizaLambdas(AFND *p_afnd_dest, AFND * p_afnd_src, AFND *p
 AFND *AFND1ODeSimbolo(char *simbolo){
 
 	AFND *afnd1O;
-	// char nombre[60] = "afnd1O_";
 	char nombre[60] = "";
 
 	if (!simbolo) return NULL;
 
+	// Creamos el automata con nombre el simbolo,
+	// dos estados y un simbolo en su alfabeto
 	afnd1O = AFNDNuevo(strcat(nombre, simbolo), 2, 1);
 	if (!afnd1O) return NULL;
 
+	// Insertamos el simbolo en el alfabeto del automata
 	AFNDInsertaSimbolo(afnd1O, simbolo);
 
+	// Creamos dos estados, inicial y final
 	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
 	AFNDInsertaEstado(afnd1O, "qf", FINAL);
 
+	// Y aniadimos una transicion del inicial al final por medio del simbolo
 	AFNDInsertaTransicion(afnd1O, "q0", simbolo, "qf");
 
 	return afnd1O;
@@ -854,12 +918,15 @@ AFND *AFND1ODeLambda(){
 	
 	AFND *afnd1O;
 
+	// Creamos un afnd con nombre afnd1O_lambda, dos estados y ningun simbolo
 	afnd1O = AFNDNuevo("afnd1O_lambda", 2, 0);
 	if (!afnd1O) return NULL;
 
+	// Creamos dos estados, inicial y final
 	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
 	AFNDInsertaEstado(afnd1O, "qf", FINAL);
 
+	// Insertamos una transicion lambda del inicial al final
 	AFNDInsertaLTransicion(afnd1O, "q0", "qf");
 
 	return afnd1O;
@@ -869,9 +936,11 @@ AFND *AFND1ODeVacio(){
 
 	AFND *afnd1O;
 
+	// Creamos un afnd con nombre afnd1O_vacio, dos estados y ningun simbolo
 	afnd1O = AFNDNuevo("afnd1O_vacio", 2, 0);
 	if (!afnd1O) return NULL;
 
+	// Creamos dos estados, inicial y final
 	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
 	AFNDInsertaEstado(afnd1O, "qf", FINAL);
 
@@ -886,19 +955,27 @@ AFND *AFNDAAFND1O(AFND *p_afnd){
 
 	if (!p_afnd) return NULL;
 
+	// Numero de simbolos del afnd
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd->alfabeto);
+	// Simbolos del alfabeto del afnd
 	simbolos = AlfabetoGetSimbolos(p_afnd->alfabeto);
 
+	// Creamos un nuevo afnd con el mismo nombre que el anterior,
+	// dos estados mas que este y el mismo numero de simbolos
 	afnd1O = AFNDNuevo(p_afnd->nombre, p_afnd->num_estados+2, num_simbolos);
 	if (!afnd1O) return NULL;
 
+	// Creamos dos estados, inicial y final
 	AFNDInsertaEstado(afnd1O, "nuevo_q0", INICIAL);
 	AFNDInsertaEstado(afnd1O, "nuevo_qf", FINAL);
 
+	// Insertamos los simbolos del afnd en el nuevo
 	insertaSimbolosAlfabeto(afnd1O, simbolos, num_simbolos);
-
+	// Copiamos las transiciones y las lambdas de un afnd a otro
 	copiaTransicionesYLambda(afnd1O, p_afnd, NULL);
-
+	// Copiamos los estados e insertamos una transicion lambda desde 
+	// el estado inicial del nuevo afnd al estado inicial de p_afnd,
+	// y desde el estado final de p_afnd al estado final del nuevo afnd
 	copiaEstados_actualizaLambdas(afnd1O, p_afnd, NULL, 1, 0, 0);
 
 	return afnd1O;
@@ -915,15 +992,20 @@ AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
 
 	if (!p_afnd1O_1 || !p_afnd1O_2) return NULL;
 
+	// Numero de simbolos y simbolos del alfabeto del primer afnd
 	num_simbolos1 = AlfabetoGetNumSimbolos(p_afnd1O_1->alfabeto);
 	simbolos1 = AlfabetoGetSimbolos(p_afnd1O_1->alfabeto);
 
+	// Numero de simbolos y simbolos del alfabeto del segundo afnd
 	num_simbolos2 = AlfabetoGetNumSimbolos(p_afnd1O_2->alfabeto);
 	simbolos2 = AlfabetoGetSimbolos(p_afnd1O_2->alfabeto);
 	
+	// Numero de estados del nuevo automata: la suma de los anteriores y dos nuevos
 	num_estados = p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2;
+	// Numero de simbolos maximo del nuevo automata: la suma de los anteriores
 	num_simbolos = num_simbolos1 + num_simbolos2;
 
+	// Nombre del nuevo automata
 	len = strlen(p_afnd1O_1->nombre) + strlen(p_afnd1O_2->nombre) + 9;
 	nombre = (char *) malloc(sizeof(char) * len);
 	if (!nombre) return NULL;
@@ -934,6 +1016,9 @@ AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
 		return  NULL;
 	}
 
+	// Creamos un nuevo automata con nombre la union de los nombres de los dos automatas
+	// anteriores, unidos por _U_ y entre parentesis, numero de estados num_estados y 
+	// numero de simbolos num_simbolos
 	afnd1O = AFNDNuevo(strcat(strcat(strcat(nombre, "_U_"), p_afnd1O_2->nombre), ")"), 
 										 num_estados, 
 										 num_simbolos);
@@ -943,15 +1028,18 @@ AFND *AFND1OUne(AFND *p_afnd1O_1, AFND *p_afnd1O_2){
 		return NULL;
 	}
 
-	AFNDInsertaEstado(afnd1O, /*strcat(nombre, "_q0")*/ "q0", INICIAL);
-	// nombre[strlen(nombre)-1] = 'f';
-	AFNDInsertaEstado(afnd1O, /*nombre*/ "qf", FINAL);
+	// Creamos dos nuevos estados, inicial y final
+	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
+	AFNDInsertaEstado(afnd1O, "qf", FINAL);
 
+	// Insertamos los simbolos de los dos automatas en el alfabeto del nuevo
 	insertaSimbolosAlfabeto(afnd1O, simbolos1, num_simbolos1);
 	insertaSimbolosAlfabeto(afnd1O, simbolos2, num_simbolos2);
-
+	// Copiamos las transiciones y las lambdas de los dos afnds al nuevo
 	copiaTransicionesYLambda(afnd1O, p_afnd1O_1, p_afnd1O_2);
-
+	// Copiamos los estados como de tipo NORMAL, insertando dos transiciones 
+	// lambda del nuevo estado inicial a los estados iniciales de ambos afnds, y 
+	// otras del los estados finales de los afnds al nuevo estado final.
 	copiaEstados_actualizaLambdas(afnd1O, p_afnd1O_1, p_afnd1O_2, 1, 0, 0);
 
 	free(nombre);
@@ -969,15 +1057,20 @@ AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
 	
 	if (!p_afnd_origen1 || !p_afnd_origen2) return NULL;
 
+	// Numero de simbolos y simbolos del alfabeto del primer afnd
 	num_simbolos1 = AlfabetoGetNumSimbolos(p_afnd_origen1->alfabeto);
 	simbolos1 = AlfabetoGetSimbolos(p_afnd_origen1->alfabeto);
 	
+	// Numero de simbolos y simbolos del alfabeto del segundo afnd
 	num_simbolos2 = AlfabetoGetNumSimbolos(p_afnd_origen2->alfabeto);
 	simbolos2 = AlfabetoGetSimbolos(p_afnd_origen2->alfabeto);
 	
+	// Numero de simbolos maximo del nuevo automata: la suma de los anteriores
 	num_simbolos = num_simbolos1 + num_simbolos2;
+	// Numero de estados del nuevo automata: la suma de los anteriores y dos nuevos
 	num_estados = p_afnd_origen1->num_estados + p_afnd_origen2->num_estados + 2;
 
+	// Nombre del nuevo automata
 	len = strlen(p_afnd_origen1->nombre) + strlen(p_afnd_origen2->nombre) + 9;
 	nombre = (char *) malloc(sizeof(char) * len);
 	if (!nombre) return NULL;
@@ -988,6 +1081,9 @@ AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
 		return  NULL;
 	}
 
+	// Creamos un nuevo automata con nombre la union de los nombres de los dos automatas
+	// anteriores, unidos por _K_ y entre parentesis, numero de estados num_estados y 
+	// numero de simbolos num_simbolos
 	afnd1O = AFNDNuevo(strcat(strcat(strcat(nombre, "_K_"), p_afnd_origen2->nombre), ")"), 
 										 num_estados, 
 										 num_simbolos);
@@ -997,15 +1093,19 @@ AFND *AFND1OConcatena(AFND *p_afnd_origen1, AFND *p_afnd_origen2){
 		return NULL;
 	}
 
-	AFNDInsertaEstado(afnd1O, /*strcat(nombre, "_q0")*/ "q0", INICIAL);
-	// nombre[strlen(nombre)-1] = 'f';
-	AFNDInsertaEstado(afnd1O, /*nombre*/ "qf", FINAL);
+	// Creamos dos nuevos estados, inicial y final
+	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
+	AFNDInsertaEstado(afnd1O, "qf", FINAL);
 
+	// Insertamos los simbolos de los dos automatas en el alfabeto del nuevo
 	insertaSimbolosAlfabeto(afnd1O, simbolos1, num_simbolos1);
 	insertaSimbolosAlfabeto(afnd1O, simbolos2, num_simbolos2);
-
+	// Copiamos las transiciones y las lambdas de los dos afnds al nuevo
 	copiaTransicionesYLambda(afnd1O, p_afnd_origen1, p_afnd_origen2);
-
+	// Copiamos los estados como de tipo NORMAL, insertando las siguientes transiciones lambda:
+	// 		- del nuevo estado inicial al estado inicial de p_afnd_origen1
+	// 		- del estado final de p_afnd_origen1 al inicial de p_afnd_origen2
+	// 		- del estado final de p_afnd_origen2 al nuevo estado final
 	copiaEstados_actualizaLambdas(afnd1O, p_afnd_origen1, p_afnd_origen2, 0, 1, 0);
 
 	free(nombre);
@@ -1021,6 +1121,7 @@ AFND *AFND1OEstrella(AFND *p_afnd_origen){
 
 	if (!p_afnd_origen) return NULL;
 
+	// Nombre del nuevo automata
 	nombre = (char *) malloc(sizeof(char) * (strlen(p_afnd_origen->nombre) + 10));
 	if (!nombre) 
 		return NULL;
@@ -1030,27 +1131,33 @@ AFND *AFND1OEstrella(AFND *p_afnd_origen){
 		return NULL;
 	}
 
+	// Numero de simbolos y simbolos del alfabeto del primer afnd
 	num_simbolos = AlfabetoGetNumSimbolos(p_afnd_origen->alfabeto);
 	simbolos = AlfabetoGetSimbolos(p_afnd_origen->alfabeto);
 	
+	// Creamos un nuevo automata con el mismo nombre que p_afnd_origen aniadiendo el sufijo _x, 
+	// el numero de estados de p_afnd_origen mas dos nuevos, y los mismos simbolos
 	afnd1O = AFNDNuevo(strcat(nombre, "_x"), p_afnd_origen->num_estados+2, num_simbolos);
 	if (!afnd1O){
 		free(nombre);
 		return NULL;
 	}
 
-	nombre[strlen(p_afnd_origen->nombre)] = '\0';
-	AFNDInsertaEstado(afnd1O, /*strcat(nombre, "_q0")*/ "q0", INICIAL);
-	// nombre[strlen(nombre)-1] = 'f';
-	AFNDInsertaEstado(afnd1O, /*nombre*/ "qf", FINAL);
-
+	// Creamos dos nuevos estados, inicial y final
+	AFNDInsertaEstado(afnd1O, "q0", INICIAL);
+	AFNDInsertaEstado(afnd1O, "qf", FINAL);
+	// Insertamos los simbolos del afnd en el alfabeto del nuevo
 	insertaSimbolosAlfabeto(afnd1O, simbolos, num_simbolos);
-
+	// Copiamos las transiciones y las lambdas del afnd al nuevo
 	copiaTransicionesYLambda(afnd1O, p_afnd_origen, NULL);
-
+	// Copiamos los estados como de tipo NORMAL, insertando las siguientes transiciones lambda:
+	// 		- del nuevo estado inicial al estado inicial de p_afnd_origen
+	// 		- del estado final de p_afnd_origen al nuevo estado final
 	copiaEstados_actualizaLambdas(afnd1O, p_afnd_origen, NULL, 0, 0, 1);
 
+	// Aniadimos ademas una lambda del estado inicial al final
 	afnd1O->lambdas[0][1] = 1;
+	// y otra del estado final al inicial
 	afnd1O->lambdas[1][0] = 1;
 
 	free(nombre);
@@ -1065,6 +1172,7 @@ void AFNDADot(AFND *p_afnd){
 	
 	if (!p_afnd) return;
 
+	// El nombre del fichero será el del afnd a representar
 	file_name = (char *) malloc(sizeof(char *) * (strlen(p_afnd->nombre) + 5));
 	if (!file_name) return;
 
@@ -1087,6 +1195,8 @@ void AFNDADot(AFND *p_afnd){
 	fprintf(f, "digraph \"%s\" { rankdir=BT;\n", p_afnd->nombre);
 	fprintf(f, "\t _invisible [style=\"invis\"];\n");
 
+	// Por cada estado imprimimos la etiqueta con su nombre, 
+	// y en el caso del estado final aumentamos el grosor del circulo
 	for (i = 0; i < p_afnd->num_estados; i++){
 		fprintf(f, "\t \"%s\" ", getNombre(p_afnd->estados[i]));	
 		if (getTipoEstado(p_afnd->estados[i]) == FINAL || 
@@ -1095,6 +1205,7 @@ void AFNDADot(AFND *p_afnd){
 		fprintf(f, ";\n");
 	}
 
+	// Recorremos los estados buscando el estado inicial para indicarlo en el dot
 	for (i = 0; i < p_afnd->num_estados; i++){
 		if (getTipoEstado(p_afnd->estados[i]) == INICIAL || 
 				getTipoEstado(p_afnd->estados[i]) == INICIAL_Y_FINAL){
@@ -1102,6 +1213,7 @@ void AFNDADot(AFND *p_afnd){
 		}
 	}	
 
+	// Imprimimos las transiciones entre estados, incluyendo el simbolo
 	for (i = 0; i < p_afnd->num_estados; i++)
 		for (j = 0; j < AlfabetoGetNumSimbolos(p_afnd->alfabeto); j++)
 			for (k = 0; k < p_afnd->num_estados; k++)
@@ -1112,6 +1224,7 @@ void AFNDADot(AFND *p_afnd){
 						  AlfabetoGetSimbolos(p_afnd->alfabeto)[j]);
 		
 
+	// Imprimimos las transiciones lambda 
 	for (i = 0; i < p_afnd->num_estados; i++)
 			for (j = 0; j < p_afnd->num_estados; j++)
 					if (p_afnd->lambdas[i][j] && i != j)
