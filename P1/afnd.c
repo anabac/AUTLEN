@@ -227,7 +227,7 @@ void AFNDElimina(AFND * p_afnd){
 
 	// Eliminacion de la matriz cubica de transiciones
 	for (i = 0; i < p_afnd->num_estados; i++){
-		for(j = 0; j < AlfabetoGetNumSimbolos(p_afnd->alfabeto); j++)
+		for(j = 0; j < AlfabetoGetNumMaxSimbolos(p_afnd->alfabeto); j++)
 			free(p_afnd->transiciones[i][j]);
 		free(p_afnd->transiciones[i]);
 	}

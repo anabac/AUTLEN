@@ -86,6 +86,11 @@ int AlfabetoGetNumSimbolos(Alfabeto *alf){
 	return alf->num_simbolos_insertados;
 }
 
+int AlfabetoGetNumMaxSimbolos(Alfabeto *alf){
+	if (!alf) return 0;
+	return alf->num_simbolos;
+}
+
 int getIndiceSimbolo(Alfabeto *alf, char *simbolo){
 	int i;
 
